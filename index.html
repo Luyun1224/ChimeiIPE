@@ -38,7 +38,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","
 
 main{max-width:760px;margin:26px auto 40px;padding:0 16px}
 .card{background:var(--card);border-radius:12px;padding:22px 20px;margin-bottom:18px;border-top:6px solid var(--vermilion);box-shadow:0 2px 12px rgba(90,40,10,.06)}
-#secIPE{border-top-color:var(--coral)} #secFb{border-top-color:var(--mustard)} #secSat{border-top-color:var(--vermilion)}
+#secIPE{border-top-color:var(--coral)} #secFb{border-top-color:var(--mustard)}
 .sec-h{display:flex;align-items:center;gap:10px;margin:0 0 4px;font-size:20px;font-weight:900;color:var(--ink)}
 .sec-h .num{background:var(--ink);color:#fff;width:32px;height:32px;border-radius:6px;display:grid;place-items:center;font-size:16px;flex:none;font-family:"Playfair Display",serif;font-style:italic}
 .sec-sub{color:var(--muted);font-size:14px;margin:0 0 16px}
@@ -76,7 +76,7 @@ textarea{min-height:96px;resize:vertical}
 .opt input{width:18px;height:18px;accent-color:var(--vermilion);flex:none}
 .opt:has(input:checked){border-color:var(--mustard);background:#fdf3e1}
 .q.bad .q-t,.fld.bad label.f{color:var(--err)}
-.fld.bad input,.fld.bad select{border-color:var(--err)}
+.fld.bad input,.fld.bad select,.fld.bad textarea{border-color:var(--err)}
 .q.bad .likert .box,.q.bad .opt{border-color:#f2b3a6}
 #phaseQ.bad .phase{box-shadow:0 0 0 3px var(--err);opacity:.8}
 .hidden{display:none!important}
@@ -100,7 +100,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px
     <div class="big">跨領域</div>
     <div class="script" style="padding-left:22px">Interprofessional</div>
     <div style="padding-left:22px"><span class="ttl">院級 <em>IPE</em> 問卷</span>
-    <div class="sub">課前請填「前測」；課程結束後請填「後測＋課程滿意度」。</div></div>
+    <div class="sub">課前請填「前測」；課程結束後請填「後測＋活動回饋」。</div></div>
   </div>
   <div class="p2"><div class="yr">PRE</div><div class="big">前</div><div class="script">Pre-test</div><div class="ghost">01</div></div>
   <div class="p3"><div class="yr">POST</div><div class="big">後</div><div class="script">Post-test</div><div class="ghost">02</div></div>
@@ -142,7 +142,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px
     <p class="sec-sub">選擇後會出現對應的題目。</p>
     <div class="phase-wrap q" id="phaseQ" style="border:none;padding:0">
       <label class="phase pre"><input type="radio" name="phase" value="前測"><i>Pre-test</i><b>課前評估</b><span>IPE 前測</span></label>
-      <label class="phase post"><input type="radio" name="phase" value="後測"><i>Post-test</i><b>課後評估</b><span>IPE 後測＋課程滿意度</span></label>
+      <label class="phase post"><input type="radio" name="phase" value="後測"><i>Post-test</i><b>課後評估</b><span>IPE 後測＋活動回饋與滿意度</span></label>
     </div>
   </section>
 
@@ -157,7 +157,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px
   <!-- ④ 後測專屬：IPE 活動回饋 -->
   <section class="card hidden post-only" id="secFb">
     <div class="part-label">Post-test</div>
-    <h2 class="sec-h"><span class="num">4</span>IPE 活動回饋</h2>
+    <h2 class="sec-h"><span class="num">4</span>IPE 活動回饋與滿意度</h2>
     <div class="q" data-q="gain">
       <div class="q-t">您認為本次 IPE 活動中最具收穫的環節是什麼？（可複選）<span class="req">*</span></div>
       <div class="opts" id="gainOpts"></div>
@@ -166,21 +166,13 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px
       <div class="q-t">本次協作中，您認為團隊在以下哪方面表現最為出色？<span class="req">*</span></div>
       <div class="opts" id="teamOpts"></div>
     </div>
-  </section>
-
-  <!-- ⑤ 後測專屬：課程滿意度 -->
-  <section class="card hidden post-only" id="secSat">
-    <div class="part-label">Satisfaction</div>
-    <h2 class="sec-h"><span class="num">5</span>課程滿意度</h2>
-    <p class="sec-sub">1 = 非常不同意，5 = 非常同意</p>
-    <div id="satList"></div>
     <div class="q" data-q="overall">
-      <div class="q-t"><span class="dim">整體</span>本次跨專業協作活動（IPE Meeting）的整體滿意度<span class="req">*</span></div>
+      <div class="q-t">本次 Interprofessional Education Meeting 跨專業協作活動的整體滿意度是？<span class="req">*</span></div>
       <div class="likert" data-name="overall" data-labels="非常不滿意,不滿意,普通,滿意,非常滿意"></div>
     </div>
-    <div class="q">
-      <div class="q-t">您認為未來 IPE 活動可以加強或改進的面向，或其他回饋意見</div>
-      <textarea name="comment" placeholder="選填"></textarea>
+    <div class="q fld" data-q="comment">
+      <div class="q-t">您認為未來在 IPE 活動中，可以加強或改進的面向是什麼？<span class="req">*</span></div>
+      <textarea name="comment" placeholder="若無，請填「無」"></textarea>
     </div>
   </section>
 
@@ -215,8 +207,6 @@ const IPE = [
   {k:"ipe5", dim:"團隊整合", t:"我能整合不同觀點，形成一個比原本我個人想法更全面的照顧思維。"},
   {k:"ipe6", dim:"能力轉移", t:"我能熟練地將團隊夥伴的專業建議，轉化為優化臨床決策的重要參考。"}
 ];
-const SAT = ["時數安排適當","內容準備充分","內容對臨床工作有幫助","會議所提供之硬體設備充足","會議活動安排適當",
-             "報告者具教學熱忱","報告者具備豐富知識","報告者內容清晰有條理，能掌握重點","會議回饋方式及內容充實"];
 const GAIN = ["專業角色介紹與理解","個案討論與分析","共同制定照護計畫","與不同專業背景成員的自由交流","協作技巧演練"];
 const TEAM = ["相互尊重與信任","訊息共享與記錄","共同目標設定","決策過程與共識達成","衝突處理與解決"];
 const AGREE = "非常不同意,不同意,普通,同意,非常同意";
@@ -234,11 +224,6 @@ function buildIPE(phase){
       <div class="likert">${likertHTML(q.k, AGREE)}</div>
     </div>`).join("");
 }
-$("#satList").innerHTML = SAT.map((t,i)=>`
-  <div class="q" data-q="sat${i+1}">
-    <div class="q-t">${t}<span class="req">*</span></div>
-    <div class="likert">${likertHTML("sat"+(i+1), AGREE)}</div>
-  </div>`).join("");
 document.querySelectorAll(".likert[data-name]").forEach(el=>el.innerHTML = likertHTML(el.dataset.name, el.dataset.labels));
 $("#gainOpts").innerHTML = GAIN.map(g=>`<label class="opt"><input type="checkbox" name="gain" value="${g}">${g}</label>`).join("");
 $("#teamOpts").innerHTML = TEAM.map(g=>`<label class="opt"><input type="radio" name="teamBest" value="${g}">${g}</label>`).join("");
@@ -279,7 +264,7 @@ $("#backBtn").addEventListener("click", ()=>{
     const r=form.querySelector('input[name=phase][value="後測"]');
     r.checked=true; r.dispatchEvent(new Event("change",{bubbles:true}));
   }else{
-    ["secIPE","secFb","secSat","submitWrap"].forEach(id=>$("#"+id).classList.add("hidden"));
+    ["secIPE","secFb","submitWrap"].forEach(id=>$("#"+id).classList.add("hidden"));
     window.scrollTo({top:0, behavior:"smooth"});
   }
 });
@@ -305,10 +290,10 @@ form.addEventListener("submit", async e=>{
   if(phase){
     IPE.forEach(q=>{ if(!val(q.k)) bad.push(form.querySelector(`[data-q="${q.k}"]`)); });
     if(isPost){
-      SAT.forEach((_,i)=>{ if(!val("sat"+(i+1))) bad.push(form.querySelector(`[data-q="sat${i+1}"]`)); });
       if(!form.querySelector('input[name=gain]:checked')) bad.push(form.querySelector('[data-q="gain"]'));
       if(!val("teamBest")) bad.push(form.querySelector('[data-q="teamBest"]'));
       if(!val("overall")) bad.push(form.querySelector('[data-q="overall"]'));
+      if(!form.comment.value.trim()) bad.push(form.querySelector('[data-q="comment"]'));
     }
   }
   document.querySelectorAll(".bad").forEach(x=>x.classList.remove("bad"));
@@ -330,7 +315,6 @@ form.addEventListener("submit", async e=>{
   };
   IPE.forEach(q=>data[q.k]=Number(val(q.k)));
   if(isPost){
-    SAT.forEach((_,i)=>data["sat"+(i+1)]=Number(val("sat"+(i+1))));
     data.gain = [...form.querySelectorAll('input[name=gain]:checked')].map(x=>x.value).join("、");
     data.teamBest = val("teamBest");
     data.overall = Number(val("overall"));
