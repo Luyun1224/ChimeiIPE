@@ -116,11 +116,6 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px
     <div class="grid">
       <div class="fld"><label class="f">姓名<span class="req">*</span></label><input type="text" name="name" autocomplete="name"></div>
       <div class="fld"><label class="f">人事號<span class="req">*</span></label><input type="text" name="empId" placeholder="無人事號者請填「實習學生」或身分別"></div>
-      <div class="fld"><label class="f">身分別<span class="req">*</span></label>
-        <select name="identity">
-          <option value="">請選擇</option>
-          <option>永康總院</option><option>樹林院區</option><option>實習教師／學生</option>
-        </select></div>
       <div class="fld"><label class="f">單位科別<span class="req">*</span></label><input type="text" name="unit" placeholder="例：10A、GI"></div>
       <div class="fld"><label class="f">職類<span class="req">*</span></label>
         <select name="job" id="job">
@@ -232,7 +227,7 @@ $("#teamOpts").innerHTML = TEAM.map(g=>`<label class="opt"><input type="radio" n
 (function(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); form.courseDate.value=d.toISOString().slice(0,10); })();
 
 /* 同一裝置記住基本資料（方便後測時帶入） */
-const KEY="ipe_basic_v1", BASIC=["name","empId","identity","unit","job","jobOther"];
+const KEY="ipe_basic_v1", BASIC=["name","empId","unit","job","jobOther"];
 try{ const s=JSON.parse(localStorage.getItem(KEY)||"{}"); BASIC.forEach(k=>{ if(s[k]) form[k].value=s[k]; }); }catch(e){}
 
 function toggleJobOther(){ $("#jobOtherWrap").classList.toggle("hidden", form.job.value!=="其他"); }
@@ -280,7 +275,7 @@ form.addEventListener("submit", async e=>{
   $("#err").textContent="";
   const bad=[];
   // 基本資料
-  ["name","empId","identity","unit","job","courseDate"].forEach(k=>{
+  ["name","empId","unit","job","courseDate"].forEach(k=>{
     if(!String(form[k].value).trim()) bad.push(form[k].closest(".fld"));
   });
   if(form.job.value==="其他" && !form.jobOther.value.trim()) bad.push($("#jobOtherWrap"));
@@ -309,7 +304,6 @@ form.addEventListener("submit", async e=>{
     phase,
     name: form.name.value.trim(),
     empId: form.empId.value.trim(),
-    identity: form.identity.value,
     unit: form.unit.value.trim(),
     job: form.job.value==="其他" ? "其他："+form.jobOther.value.trim() : form.job.value
   };
