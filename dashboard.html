@@ -142,7 +142,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
       <div class="ch"><span class="tag">Pre vs Post</span><h2>六大面向前後測比較</h2>
         <div class="seg" id="cmpMode"><button data-v="all" class="on">全部填答</button><button data-v="paired">僅配對成功者</button></div></div>
       <p class="desc" id="cmpDesc"></p>
-      <div class="legend" id="dimLegend"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><div class="legend" id="dimLegend"></div><div class="seg" id="viewMode"><button data-v="radar" class="on">雷達圖</button><button data-v="dumbbell">啞鈴圖</button></div></div>
       <div class="chart" id="dimChart"></div>
       <div class="tbl-wrap" style="margin-top:12px"><table id="pairTbl"></table></div>
       <p class="note">配對：同一人（人事號＋姓名）的後測，對應到課程日期在 14 天內、最接近的前測。p 值為配對 t 檢定（雙尾），<span class="sig">*</span> p&lt;.05、<span class="sig">**</span> p&lt;.01、<span class="sig">***</span> p&lt;.001；d 為配對效果量。</p>
@@ -172,7 +172,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
     <div class="grid2">
       <section class="card">
         <div class="ch"><span class="tag">Satisfaction</span><h2>課程滿意度（各題平均）</h2></div>
-        <p class="desc">5 分量表，僅後測填答。</p>
+        <p class="desc">5 分量表，含新版問卷後測及歷年課後滿意度問卷。</p>
         <div class="chart" id="satChart"></div>
       </section>
       <section class="card">
@@ -181,6 +181,12 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
         <div class="chart" id="ovChart"></div>
       </section>
     </div>
+
+    <section class="card">
+      <div class="ch"><span class="tag">Satisfaction Trend</span><h2>歷次課程滿意度（9 題平均）</h2></div>
+      <p class="desc">每個點是一場課程的 9 題滿意度平均，滑鼠移上去可看整體滿意度與份數。只畫出至少 3 份的場次。</p>
+      <div class="chart" id="satTrend"></div>
+    </section>
 
     <div class="grid2">
       <section class="card">
@@ -214,7 +220,7 @@ const GAIN = ["專業角色介紹與理解","個案討論與分析","共同制�
 const TEAM = ["相互尊重與信任","訊息共享與記錄","共同目標設定","決策過程與共識達成","衝突處理與解決"];
 const PAIR_DAYS = 14, MIN_N = 3;
 
-let ALL = [], cmpMode = "all";
+let ALL = [], cmpMode = "all", viewMode = "radar";
 const $ = s => document.querySelector(s);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
@@ -227,7 +233,7 @@ const pct = v => v==null ? "–" : (v*100).toFixed(0)+"%";
 const jobGroup = j => { j = String(j||"").trim(); return !j ? "未填" : j.startsWith("其他") ? "其他" : j; };
 const dayDiff = (a,b) => (new Date(b) - new Date(a)) / 864e5;
 const ipeAvg = r => { const v = DIMS.map(d=>num(r[d[0]])); return v.every(x=>x!=null) ? mean(v) : null; };
-function el(tag, attrs={}, text){ const ns = ["svg","g","rect","circle","line","text","path","polyline"].includes(tag) ? "http://www.w3.org/2000/svg" : null;
+function el(tag, attrs={}, text){ const ns = ["svg","g","rect","circle","line","text","path","polyline","polygon"].includes(tag) ? "http://www.w3.org/2000/svg" : null;
   const e = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
   for(const k in attrs) e.setAttribute(k, attrs[k]); if(text!=null) e.textContent = text; return e; }
 function clear(n){ while(n.firstChild) n.removeChild(n.firstChild); return n; }
@@ -261,7 +267,7 @@ async function load(){
   try{
     const res = await fetch(GAS_URL + "?action=data&t=" + Date.now());
     const j = await res.json(); if(!j.ok) throw new Error(j.error || "讀取失敗");
-    ALL = (j.rows||[]).map(r=>{ r.courseDate = String(r.courseDate||r.timestamp||"").slice(0,10); r.jobG = jobGroup(r.job); r.avg = ipeAvg(r); return r; }).filter(r=>r.phase==="前測"||r.phase==="後測");
+    ALL = (j.rows||[]).map(r=>{ r.courseDate = String(r.courseDate||r.timestamp||"").slice(0,10); r.jobG = jobGroup(r.job); r.avg = ipeAvg(r); return r; }).filter(r=>r.phase==="前測"||r.phase==="後測"||r.phase==="滿意度");
     $("#updated").textContent = `資料更新：${j.updated||"—"}　共 ${ALL.length} 筆`;
     buildFilterOptions(); render();
   }catch(err){
@@ -303,25 +309,26 @@ function makePairs(rows){
 
 /* ---------- render ---------- */
 function render(){
-  const rows = filtered(false), pre = rows.filter(r=>r.phase==="前測"), post = rows.filter(r=>r.phase==="後測");
+  const rows = filtered(false), pre = rows.filter(r=>r.phase==="前測"), post = rows.filter(r=>r.phase==="後測"), satR = rows.filter(r=>r.phase!=="前測");
   const pairs = makePairs(rows);
-  renderKPIs(pre, post, pairs);
+  renderKPIs(pre, post, pairs, satR);
   renderDims(pre, post, pairs);
   renderJobs();
   renderHeat(filtered(true));
   renderTrend(rows);
-  renderSat(post);
+  renderSat(satR);
+  renderSatTrend(satR);
   renderMulti($("#gainChart"), post, "gain", GAIN, true);
   renderMulti($("#teamChart"), post, "teamBest", TEAM, false);
-  renderComments(post);
+  renderComments(satR);
 }
 
 function kpi(cls, k, v, s){ const d = el("div",{class:"kpi "+cls}); d.appendChild(el("div",{class:"k"},k)); d.appendChild(el("div",{class:"v"},v)); const sEl=el("div",{class:"s"}); if(s instanceof Node) sEl.appendChild(s); else sEl.textContent=s||""; d.appendChild(sEl); return d; }
 function deltaSpan(dv, suffix=""){ const s = el("span",{class: dv>0?"up":dv<0?"down":""}, dv==null?"–":(dv>0?"▲ +":dv<0?"▼ ":"")+dv.toFixed(2)+suffix); return s; }
-function renderKPIs(pre, post, pairs){
+function renderKPIs(pre, post, pairs, satR){
   const box = clear($("#kpis"));
   const mPre = mean(pre.map(r=>r.avg).filter(x=>x!=null)), mPost = mean(post.map(r=>r.avg).filter(x=>x!=null));
-  const ov = post.map(r=>num(r.overall)).filter(x=>x!=null), sat = post.map(r=>num(r.satAvg)).filter(x=>x!=null);
+  const ov = satR.map(r=>num(r.overall)).filter(x=>x!=null);
   const pd = pairs.map(p=>p.post.avg-p.pre.avg).filter(x=>!isNaN(x));
   box.appendChild(kpi("pre","前測份數", pre.length, ""));
   box.appendChild(kpi("post","後測份數", post.length, pre.length? `後測／前測 ${pct(post.length/pre.length)}` : ""));
@@ -361,6 +368,38 @@ function dumbbell(node, items, opts={}){
   node.appendChild(svg);
 }
 
+
+/* 雷達圖：圓心不是 0 分（會標示），只用來看輪廓；精確數字看下方表格或切到啞鈴圖 */
+function radar(node, items){
+  clear(node); if(!items.length){ node.appendChild(el("div",{class:"empty"},"目前沒有資料")); return; }
+  const Wc = node.clientWidth || 700, W = Math.min(Wc, 640), H = Math.min(440, W*0.78), cx = W/2, cy = H/2+4, R = Math.min(W*0.32, H*0.40, W/2-78);
+  const vals = items.flatMap(i=>[i.a,i.b]).filter(v=>v!=null);
+  const lo = Math.max(1, Math.floor(Math.min(...vals)*2)/2 - .5), hi = 5, n = items.length;
+  const ang = i => -Math.PI/2 + i*2*Math.PI/n, rr = v => (Math.max(lo,v)-lo)/(hi-lo)*R;
+  const pt = (i,v) => [cx + rr(v)*Math.cos(ang(i)), cy + rr(v)*Math.sin(ang(i))];
+  const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"六大面向前後測雷達圖"});
+  svg.style.margin="0 auto";
+  for(let v=lo; v<=hi+1e-9; v+=.5){ const ring = items.map((_,i)=>pt(i,v).join(",")).join(" ");
+    svg.appendChild(el("polygon",{points:ring,fill:"none",stroke:css("--grid"),"stroke-width":1}));
+    svg.appendChild(el("text",{x:cx+4,y:cy-rr(v)-3,"font-size":10.5,fill:css("--muted")},v.toFixed(1))); }
+  items.forEach((it,i)=>{ const [x,y]=pt(i,hi); svg.appendChild(el("line",{x1:cx,y1:cy,x2:x,y2:y,stroke:css("--grid")}));
+    const [lx,ly] = [cx+(R+18)*Math.cos(ang(i)), cy+(R+18)*Math.sin(ang(i)) + (Math.sin(ang(i))<-.9?-8:Math.sin(ang(i))>.9?8:0)], c=Math.cos(ang(i));
+    svg.appendChild(el("text",{x:lx,y:ly+4,"text-anchor":Math.abs(c)<.2?"middle":c>0?"start":"end","font-size":13.5,"font-weight":700,fill:css("--ink")},it.label)); });
+  [["a","--pre",.10],["b","--post",.16]].forEach(([k,c,op])=>{
+    if(items.some(it=>it[k]==null)) return;
+    const pts = items.map((it,i)=>pt(i,it[k]).join(",")).join(" ");
+    svg.appendChild(el("polygon",{points:pts,fill:css(c),"fill-opacity":op,stroke:css(c),"stroke-width":2,"stroke-linejoin":"round"}));
+    items.forEach((it,i)=>{ const [x,y]=pt(i,it[k]); svg.appendChild(el("circle",{cx:x,cy:y,r:4.5,fill:css(c),stroke:css("--card"),"stroke-width":2})); });
+  });
+  // 每個面向一塊扇形當 hover 區
+  items.forEach((it,i)=>{ const a0=ang(i)-Math.PI/n, a1=ang(i)+Math.PI/n, RR=R+30;
+    const p = el("path",{d:`M${cx},${cy} L${cx+RR*Math.cos(a0)},${cy+RR*Math.sin(a0)} A${RR},${RR} 0 0 1 ${cx+RR*Math.cos(a1)},${cy+RR*Math.sin(a1)} Z`,fill:"transparent"});
+    setTip(p, it.label, [{k:`前測${it.na!=null?`（n=${it.na}）`:""}`,v:f2(it.a),c:css("--pre")},{k:`後測${it.nb!=null?`（n=${it.nb}）`:""}`,v:f2(it.b),c:css("--post")},{k:"差異",v:it.a!=null&&it.b!=null?(it.b-it.a>=0?"+":"")+(it.b-it.a).toFixed(2):"–"}]);
+    svg.appendChild(p); });
+  node.appendChild(svg);
+  node.appendChild(el("p",{class:"note",style:"text-align:center;margin-top:0"},`圓心為 ${lo.toFixed(1)} 分、最外圈 5 分（放大差異以便觀察）。滑鼠移到各面向可看數值；精確數字見下表。`));
+}
+
 function renderDims(pre, post, pairs){
   legendDots($("#dimLegend"));
   let items;
@@ -374,7 +413,7 @@ function renderDims(pre, post, pairs){
   }
   items.push({label:"六面向平均", a:mean(items.map(i=>i.a).filter(v=>v!=null)), b:mean(items.map(i=>i.b).filter(v=>v!=null))});
   if(items.every(i=>i.a==null&&i.b==null)) items=[];
-  dumbbell($("#dimChart"), items);
+  if(viewMode==="radar") radar($("#dimChart"), items.slice(0, DIMS.length)); else dumbbell($("#dimChart"), items);
 
   const t = clear($("#pairTbl")); const hr = el("tr"); ["面向（配對 t 檢定）","n","前測","後測","差異","p 值","效果量 d"].forEach((h,i)=>hr.appendChild(el("th",{class:i?"num":""},h))); t.appendChild(el("thead")).appendChild(hr);
   const tb = el("tbody"); t.appendChild(tb);
@@ -402,12 +441,12 @@ function renderJobs(){
   const rows = filtered(true), sel = $("#fJob").value, groups = {};
   rows.forEach(r=>(groups[r.jobG]=groups[r.jobG]||[]).push(r));
   const t = clear($("#jobTbl")); const hr = el("tr");
-  ["職類","前測 n","後測 n","配對 n","前測","後測","前→後（2.5–5）","差異","配對差異","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i&&i!==6?"num":""},h)));
+  ["職類","前測 n","後測 n","配對 n","前測","後測","前→後（2.5–5）","差異","配對差異","整體滿意度（n）"].forEach((h,i)=>hr.appendChild(el("th",{class:i&&i!==6?"num":""},h)));
   t.appendChild(el("thead")).appendChild(hr); const tb = el("tbody"); t.appendChild(tb);
   const list = Object.entries(groups).map(([j,rs])=>{ const pre=rs.filter(r=>r.phase==="前測"), post=rs.filter(r=>r.phase==="後測"), pairs=makePairs(rs);
     return {j, pre, post, pairs, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)),
-      pd: pairs.length? mean(pairs.map(p=>p.post.avg-p.pre.avg)) : null, ov: mean(post.map(r=>num(r.overall)).filter(v=>v!=null))}; })
-    .sort((x,y)=>(y.pre.length+y.post.length)-(x.pre.length+x.post.length));
+      pd: pairs.length? mean(pairs.map(p=>p.post.avg-p.pre.avg)) : null, ov: mean(rs.filter(r=>r.phase!=="前測").map(r=>num(r.overall)).filter(v=>v!=null)), ns: rs.filter(r=>r.phase!=="前測"&&num(r.overall)!=null).length}; })
+    .sort((x,y)=>(y.pre.length+y.post.length)-(x.pre.length+x.post.length) || y.ns-x.ns);
   if(!list.length){ tb.appendChild(el("tr")).appendChild(el("td",{colspan:10,class:"empty"},"目前沒有資料")); return; }
   list.forEach(o=>{
     const tr = el("tr",{class:"click"+(o.j===sel?" sel":""),tabindex:"0"});
@@ -416,7 +455,7 @@ function renderJobs(){
     const md = el("td"); md.appendChild(miniDumbbell(o.a,o.b)); tr.appendChild(md);
     const d1 = el("td",{class:"num"}); d1.appendChild(deltaSpan(o.a!=null&&o.b!=null?o.b-o.a:null)); tr.appendChild(d1);
     const d2 = el("td",{class:"num"}); d2.appendChild(deltaSpan(o.pd)); tr.appendChild(d2);
-    tr.appendChild(el("td",{class:"num"},f2(o.ov)));
+    tr.appendChild(el("td",{class:"num"},o.ov==null?"–":`${f2(o.ov)}（${o.ns}）`));
     const go = ()=>{ $("#fJob").value = (o.j===sel ? "" : o.j); render(); };
     tr.addEventListener("click", go); tr.addEventListener("keydown", e=>{ if(e.key==="Enter") go(); });
     tb.appendChild(tr);
@@ -453,11 +492,11 @@ function renderTrend(rows){
   const node = clear($("#trend")), byS = {};
   rows.forEach(r=>(byS[r.courseDate]=byS[r.courseDate]||[]).push(r));
   let ses = Object.keys(byS).sort().map(d=>{ const rs=byS[d], pre=rs.filter(r=>r.phase==="前測"), post=rs.filter(r=>r.phase==="後測");
-    return {d, np:pre.length, nq:post.length, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)), ov:mean(post.map(r=>num(r.overall)).filter(v=>v!=null)), sat:mean(post.map(r=>num(r.satAvg)).filter(v=>v!=null))}; });
+    return {d, np:pre.length, nq:post.length, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)), ov:mean(rs.filter(r=>r.phase!=="前測").map(r=>num(r.overall)).filter(v=>v!=null)), sat:mean(rs.map(r=>num(r.satAvg)).filter(v=>v!=null)), ns:rs.filter(r=>r.phase!=="前測").length}; });
   // table
-  const t = clear($("#sessTbl")); const hr=el("tr"); ["課程日期","前測 n","後測 n","前測 IPE","後測 IPE","差異","滿意度平均","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i?"num":""},h)));
+  const t = clear($("#sessTbl")); const hr=el("tr"); ["課程日期","前測 n","後測 n","滿意度 n","前測 IPE","後測 IPE","差異","滿意度平均","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i?"num":""},h)));
   t.appendChild(el("thead")).appendChild(hr); const tb=el("tbody"); t.appendChild(tb);
-  ses.slice().reverse().forEach(s=>{ const tr=el("tr"); tr.appendChild(el("td",{},s.d)); [s.np,s.nq,f2(s.a),f2(s.b)].forEach(v=>tr.appendChild(el("td",{class:"num"},v)));
+  ses.slice().reverse().forEach(s=>{ const tr=el("tr"); tr.appendChild(el("td",{},s.d)); [s.np,s.nq,s.ns,f2(s.a),f2(s.b)].forEach(v=>tr.appendChild(el("td",{class:"num"},v)));
     const dt=el("td",{class:"num"}); dt.appendChild(deltaSpan(s.a!=null&&s.b!=null?s.b-s.a:null)); tr.appendChild(dt); tr.appendChild(el("td",{class:"num"},f2(s.sat))); tr.appendChild(el("td",{class:"num"},f2(s.ov))); tb.appendChild(tr); });
   const all = ses; ses = ses.filter(s=>s.np>=MIN_N||s.nq>=MIN_N);
   if(!ses.length){ node.appendChild(el("div",{class:"empty"},"目前沒有資料")); return; }
@@ -487,7 +526,7 @@ function renderTrend(rows){
 }
 
 function hbars(node, items, opts){
-  clear(node); if(!items.length || items.every(i=>i.v==null)){ node.appendChild(el("div",{class:"empty"},"目前沒有資料")); return; }
+  clear(node); if(!items.length || items.every(i=>i.v==null)){ node.appendChild(el("div",{class:"empty"},opts.empty||"目前沒有資料")); return; }
   const W = node.clientWidth||500, labW = Math.min(opts.labW||200, W*.48), rh = opts.rh||30, H = items.length*rh + 20, max = opts.max, valW = 96;
   const x = v => (W-labW-valW) * v/max;
   const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":opts.aria||""});
@@ -503,12 +542,38 @@ function hbars(node, items, opts){
 }
 function renderSat(post){
   const items = SAT.map((l,i)=>{ const v = post.map(r=>num(r["sat"+(i+1)])).filter(x=>x!=null); return {label:l, v:mean(v), n:v.length, tip:[{k:`平均（n=${v.length}）`,v:f2(mean(v))},{k:"4–5 分比例",v:v.length?pct(v.filter(x=>x>=4).length/v.length):"–"}]}; });
-  hbars($("#satChart"), items, {max:5, ticks:[0,1,2,3,4,5], fmt:it=>f2(it.v), labW:230, aria:"課程滿意度各題平均"});
+  hbars($("#satChart"), items, {max:5, ticks:[0,1,2,3,4,5], fmt:it=>f2(it.v), labW:230, aria:"課程滿意度各題平均", empty:"目前篩選範圍內還沒有 9 題滿意度的資料。這 9 題是新版問卷才加入的，舊的 IPE 匯入資料沒有這部分；有人用新問卷填後測後就會出現。"});
   const ov = post.map(r=>num(r.overall)).filter(x=>x!=null);
   $("#ovDesc").textContent = ov.length ? `n=${ov.length}，平均 ${f2(mean(ov))}，4–5 分占 ${pct(ov.filter(x=>x>=4).length/ov.length)}。` : "";
   const lbl = ["非常不滿意","不滿意","普通","滿意","非常滿意"];
   const items2 = [5,4,3,2,1].map(s=>{ const c = ov.filter(x=>x===s).length; return {label:`${s} 分・${lbl[s-1]}`, v: ov.length? c/ov.length : null, c, tip:[{k:"人數",v:String(c)},{k:"比例",v:ov.length?pct(c/ov.length):"–"}]}; });
   hbars($("#ovChart"), ov.length?items2:[], {max:1, ticks:[0,.25,.5,.75,1], tickFmt:t=>(t*100)+"%", fmt:it=>`${pct(it.v)}（${it.c}）`, labW:130, color:"--post", aria:"整體滿意度分布"});
+}
+
+function renderSatTrend(rows){
+  const node = clear($("#satTrend")), by = {};
+  rows.forEach(r=>{ if(num(r.satAvg)!=null) (by[r.courseDate]=by[r.courseDate]||[]).push(r); });
+  const pts = Object.keys(by).sort().map(d=>({d, n:by[d].length, v:mean(by[d].map(r=>num(r.satAvg))), ov:mean(by[d].map(r=>num(r.overall)).filter(x=>x!=null))})).filter(p=>p.n>=MIN_N);
+  if(!pts.length){ node.appendChild(el("div",{class:"empty"},"目前篩選範圍內沒有 9 題滿意度資料")); return; }
+  const W = node.clientWidth||700, H = 210, L = 36, R = 20, T = 22, B = 34;
+  const lo = Math.max(1, Math.min(4, Math.floor(Math.min(...pts.map(p=>p.v))*2)/2-.5)), hi = 5;
+  const x = i => pts.length===1 ? L+(W-L-R)/2 : L + i*(W-L-R)/(pts.length-1), y = v => T + (hi-v)/(hi-lo)*(H-T-B);
+  const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"歷次課程滿意度趨勢"});
+  for(let v=lo; v<=hi+1e-9; v+=.5){ svg.appendChild(el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--grid")})); svg.appendChild(el("text",{x:L-8,y:y(v)+4,"text-anchor":"end","font-size":11,fill:css("--muted")},v.toFixed(1))); }
+  const step = Math.ceil(pts.length / Math.max(1, Math.floor((W-L-R)/70)));
+  pts.forEach((p,i)=>{ if(i%step===0||i===pts.length-1) svg.appendChild(el("text",{x:x(i),y:H-12,"text-anchor":"middle","font-size":11,fill:css("--muted")},p.d.slice(2).replace(/-/g,"/"))); });
+  const cross = el("line",{y1:T,y2:H-B,stroke:css("--muted"),"stroke-width":1,"stroke-dasharray":"3 3",opacity:0}); svg.appendChild(cross);
+  if(pts.length>1) svg.appendChild(el("polyline",{points:pts.map((p,i)=>`${x(i)},${y(p.v)}`).join(" "),fill:"none",stroke:css("--post"),"stroke-width":2,"stroke-linejoin":"round"}));
+  pts.forEach((p,i)=>svg.appendChild(el("circle",{cx:x(i),cy:y(p.v),r:4.5,fill:css("--post"),stroke:css("--card"),"stroke-width":2})));
+  const iMax = pts.reduce((b,p,i)=>p.v>pts[b].v?i:b,0), iMin = pts.reduce((b,p,i)=>p.v<pts[b].v?i:b,0);
+  [[iMax,-10],[iMin,18]].forEach(([i,dy])=>{ if(pts.length>1) svg.appendChild(el("text",{x:x(i),y:y(pts[i].v)+dy,"text-anchor":"middle","font-size":12,"font-weight":700,fill:css("--ink2")},f2(pts[i].v))); });
+  const hit = el("rect",{x:L-10,y:0,width:W-L-R+20,height:H,fill:"transparent"}); hit.__cross = true; svg.appendChild(hit);
+  hit.addEventListener("pointermove", e=>{ const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)*(W/r.width);
+    let bi=0, bd=1e9; pts.forEach((p,i)=>{ const d=Math.abs(x(i)-px); if(d<bd){bd=d;bi=i;} }); const p=pts[bi];
+    cross.setAttribute("x1",x(bi)); cross.setAttribute("x2",x(bi)); cross.setAttribute("opacity",1);
+    showTip({title:`課程日期 ${p.d}`, rows:[{k:`9 題平均（n=${p.n}）`,v:f2(p.v),c:css("--post")},{k:"整體滿意度",v:f2(p.ov)}]}, e.clientX, e.clientY); });
+  hit.addEventListener("pointerleave", ()=>{ cross.setAttribute("opacity",0); tip.style.display="none"; });
+  node.appendChild(svg);
 }
 function renderMulti(node, post, key, opts, multi){
   const n = post.filter(r=>r[key]).length;
@@ -538,6 +603,7 @@ $("#csvBtn").addEventListener("click", ()=>{
 $("#fPeriod").addEventListener("change", ()=>{ const c=$("#fPeriod").value==="custom"; $("#lFrom").hidden=!c; $("#lTo").hidden=!c; render(); });
 $("#clearBtn").addEventListener("click", ()=>{ ["#fSession","#fJob","#fId","#fFrom","#fTo"].forEach(s=>$(s).value=""); $("#fPeriod").value="all"; $("#lFrom").hidden=$("#lTo").hidden=true; render(); });
 $("#reloadBtn").addEventListener("click", load);
+$("#viewMode").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; viewMode=b.dataset.v; [...$("#viewMode").children].forEach(x=>x.classList.toggle("on",x===b)); render(); });
 $("#cmpMode").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; cmpMode=b.dataset.v; [...$("#cmpMode").children].forEach(x=>x.classList.toggle("on",x===b)); render(); });
 let rz; addEventListener("resize", ()=>{ clearTimeout(rz); rz=setTimeout(()=>ALL.length&&render(),150); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>ALL.length&&render());
