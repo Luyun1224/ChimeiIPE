@@ -61,6 +61,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","
 /* cards */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:1100px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.grid3{grid-template-columns:1fr}}
 .card{background:var(--card);border-radius:12px;padding:18px 18px 16px;margin-bottom:18px;min-width:0}
 .ch{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:4px}
 .ch h2{margin:0;font-size:17.5px;font-weight:900}
@@ -169,26 +172,12 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
       <details class="details"><summary>查看各場次數據表</summary><div class="tbl-wrap"><table id="sessTbl"></table></div></details>
     </section>
 
-    <div class="grid2">
+    <div class="grid3">
       <section class="card">
-        <div class="ch"><span class="tag">Satisfaction</span><h2>課程滿意度（各題平均）</h2></div>
-        <p class="desc">5 分量表，含新版問卷後測及歷年課後滿意度問卷。</p>
-        <div class="chart" id="satChart"></div>
-      </section>
-      <section class="card">
-        <div class="ch"><span class="tag">Overall</span><h2>整體滿意度分布</h2></div>
+        <div class="ch"><span class="tag">Overall</span><h2>IPE 活動整體滿意度</h2></div>
         <p class="desc" id="ovDesc"></p>
         <div class="chart" id="ovChart"></div>
       </section>
-    </div>
-
-    <section class="card">
-      <div class="ch"><span class="tag">Satisfaction Trend</span><h2>歷次課程滿意度（9 題平均）</h2></div>
-      <p class="desc">每個點是一場課程的 9 題滿意度平均，滑鼠移上去可看整體滿意度與份數。只畫出至少 3 份的場次。</p>
-      <div class="chart" id="satTrend"></div>
-    </section>
-
-    <div class="grid2">
       <section class="card">
         <div class="ch"><span class="tag">Takeaways</span><h2>最具收穫的環節（可複選）</h2></div>
         <p class="desc">占後測填答人數的百分比。</p>
@@ -202,7 +191,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
     </div>
 
     <section class="card">
-      <div class="ch"><span class="tag">Voices</span><h2>改進建議／回饋意見</h2><span class="desc" id="cmtCount" style="margin:0"></span></div>
+      <div class="ch"><span class="tag">Voices</span><h2>可加強或改進的面向</h2><span class="desc" id="cmtCount" style="margin:0"></span></div>
       <div class="comments" id="comments"></div>
     </section>
   </div>
@@ -215,7 +204,6 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
 const GAS_URL = "https://script.google.com/macros/s/AKfycby7zSy8dfboib32GUJ8ZIDxNhAHMcpqMsG8i3ErORlaJl7D4ByPw3ImrjHY1auN2_aD/exec";
 
 const DIMS = [["ipe1","專業認同"],["ipe2","協作行為"],["ipe3","心理安全"],["ipe4","全人整合"],["ipe5","團隊整合"],["ipe6","能力轉移"]];
-const SAT = ["時數安排適當","內容準備充分","內容對臨床工作有幫助","會議所提供之硬體設備充足","會議活動安排適當","報告者具教學熱忱","報告者具備豐富知識","報告者內容清晰有條理，能掌握重點","會議回饋方式及內容充實"];
 const GAIN = ["專業角色介紹與理解","個案討論與分析","共同制定照護計畫","與不同專業背景成員的自由交流","協作技巧演練"];
 const TEAM = ["相互尊重與信任","訊息共享與記錄","共同目標設定","決策過程與共識達成","衝突處理與解決"];
 const PAIR_DAYS = 14, MIN_N = 3;
@@ -267,7 +255,7 @@ async function load(){
   try{
     const res = await fetch(GAS_URL + "?action=data&t=" + Date.now());
     const j = await res.json(); if(!j.ok) throw new Error(j.error || "讀取失敗");
-    ALL = (j.rows||[]).map(r=>{ r.courseDate = String(r.courseDate||r.timestamp||"").slice(0,10); r.jobG = jobGroup(r.job); r.avg = ipeAvg(r); return r; }).filter(r=>r.phase==="前測"||r.phase==="後測"||r.phase==="滿意度");
+    ALL = (j.rows||[]).map(r=>{ r.courseDate = String(r.courseDate||r.timestamp||"").slice(0,10); r.jobG = jobGroup(r.job); r.avg = ipeAvg(r); return r; }).filter(r=>r.phase==="前測"||r.phase==="後測");
     $("#updated").textContent = `資料更新：${j.updated||"—"}　共 ${ALL.length} 筆`;
     buildFilterOptions(); render();
   }catch(err){
@@ -309,26 +297,25 @@ function makePairs(rows){
 
 /* ---------- render ---------- */
 function render(){
-  const rows = filtered(false), pre = rows.filter(r=>r.phase==="前測"), post = rows.filter(r=>r.phase==="後測"), satR = rows.filter(r=>r.phase!=="前測");
+  const rows = filtered(false), pre = rows.filter(r=>r.phase==="前測"), post = rows.filter(r=>r.phase==="後測");
   const pairs = makePairs(rows);
-  renderKPIs(pre, post, pairs, satR);
+  renderKPIs(pre, post, pairs);
   renderDims(pre, post, pairs);
   renderJobs();
   renderHeat(filtered(true));
   renderTrend(rows);
-  renderSat(satR);
-  renderSatTrend(satR);
+  renderOverall(post);
   renderMulti($("#gainChart"), post, "gain", GAIN, true);
   renderMulti($("#teamChart"), post, "teamBest", TEAM, false);
-  renderComments(satR);
+  renderComments(post);
 }
 
 function kpi(cls, k, v, s){ const d = el("div",{class:"kpi "+cls}); d.appendChild(el("div",{class:"k"},k)); d.appendChild(el("div",{class:"v"},v)); const sEl=el("div",{class:"s"}); if(s instanceof Node) sEl.appendChild(s); else sEl.textContent=s||""; d.appendChild(sEl); return d; }
 function deltaSpan(dv, suffix=""){ const s = el("span",{class: dv>0?"up":dv<0?"down":""}, dv==null?"–":(dv>0?"▲ +":dv<0?"▼ ":"")+dv.toFixed(2)+suffix); return s; }
-function renderKPIs(pre, post, pairs, satR){
+function renderKPIs(pre, post, pairs){
   const box = clear($("#kpis"));
   const mPre = mean(pre.map(r=>r.avg).filter(x=>x!=null)), mPost = mean(post.map(r=>r.avg).filter(x=>x!=null));
-  const ov = satR.map(r=>num(r.overall)).filter(x=>x!=null);
+  const ov = post.map(r=>num(r.overall)).filter(x=>x!=null);
   const pd = pairs.map(p=>p.post.avg-p.pre.avg).filter(x=>!isNaN(x));
   box.appendChild(kpi("pre","前測份數", pre.length, ""));
   box.appendChild(kpi("post","後測份數", post.length, pre.length? `後測／前測 ${pct(post.length/pre.length)}` : ""));
@@ -441,12 +428,12 @@ function renderJobs(){
   const rows = filtered(true), sel = $("#fJob").value, groups = {};
   rows.forEach(r=>(groups[r.jobG]=groups[r.jobG]||[]).push(r));
   const t = clear($("#jobTbl")); const hr = el("tr");
-  ["職類","前測 n","後測 n","配對 n","前測","後測","前→後（2.5–5）","差異","配對差異","整體滿意度（n）"].forEach((h,i)=>hr.appendChild(el("th",{class:i&&i!==6?"num":""},h)));
+  ["職類","前測 n","後測 n","配對 n","前測","後測","前→後（2.5–5）","差異","配對差異","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i&&i!==6?"num":""},h)));
   t.appendChild(el("thead")).appendChild(hr); const tb = el("tbody"); t.appendChild(tb);
   const list = Object.entries(groups).map(([j,rs])=>{ const pre=rs.filter(r=>r.phase==="前測"), post=rs.filter(r=>r.phase==="後測"), pairs=makePairs(rs);
     return {j, pre, post, pairs, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)),
-      pd: pairs.length? mean(pairs.map(p=>p.post.avg-p.pre.avg)) : null, ov: mean(rs.filter(r=>r.phase!=="前測").map(r=>num(r.overall)).filter(v=>v!=null)), ns: rs.filter(r=>r.phase!=="前測"&&num(r.overall)!=null).length}; })
-    .sort((x,y)=>(y.pre.length+y.post.length)-(x.pre.length+x.post.length) || y.ns-x.ns);
+      pd: pairs.length? mean(pairs.map(p=>p.post.avg-p.pre.avg)) : null, ov: mean(post.map(r=>num(r.overall)).filter(v=>v!=null))}; })
+    .sort((x,y)=>(y.pre.length+y.post.length)-(x.pre.length+x.post.length));
   if(!list.length){ tb.appendChild(el("tr")).appendChild(el("td",{colspan:10,class:"empty"},"目前沒有資料")); return; }
   list.forEach(o=>{
     const tr = el("tr",{class:"click"+(o.j===sel?" sel":""),tabindex:"0"});
@@ -455,7 +442,7 @@ function renderJobs(){
     const md = el("td"); md.appendChild(miniDumbbell(o.a,o.b)); tr.appendChild(md);
     const d1 = el("td",{class:"num"}); d1.appendChild(deltaSpan(o.a!=null&&o.b!=null?o.b-o.a:null)); tr.appendChild(d1);
     const d2 = el("td",{class:"num"}); d2.appendChild(deltaSpan(o.pd)); tr.appendChild(d2);
-    tr.appendChild(el("td",{class:"num"},o.ov==null?"–":`${f2(o.ov)}（${o.ns}）`));
+    tr.appendChild(el("td",{class:"num"},f2(o.ov)));
     const go = ()=>{ $("#fJob").value = (o.j===sel ? "" : o.j); render(); };
     tr.addEventListener("click", go); tr.addEventListener("keydown", e=>{ if(e.key==="Enter") go(); });
     tb.appendChild(tr);
@@ -492,12 +479,12 @@ function renderTrend(rows){
   const node = clear($("#trend")), byS = {};
   rows.forEach(r=>(byS[r.courseDate]=byS[r.courseDate]||[]).push(r));
   let ses = Object.keys(byS).sort().map(d=>{ const rs=byS[d], pre=rs.filter(r=>r.phase==="前測"), post=rs.filter(r=>r.phase==="後測");
-    return {d, np:pre.length, nq:post.length, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)), ov:mean(rs.filter(r=>r.phase!=="前測").map(r=>num(r.overall)).filter(v=>v!=null)), sat:mean(rs.map(r=>num(r.satAvg)).filter(v=>v!=null)), ns:rs.filter(r=>r.phase!=="前測").length}; });
+    return {d, np:pre.length, nq:post.length, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)), ov:mean(post.map(r=>num(r.overall)).filter(v=>v!=null))}; });
   // table
-  const t = clear($("#sessTbl")); const hr=el("tr"); ["課程日期","前測 n","後測 n","滿意度 n","前測 IPE","後測 IPE","差異","滿意度平均","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i?"num":""},h)));
+  const t = clear($("#sessTbl")); const hr=el("tr"); ["課程日期","前測 n","後測 n","前測 IPE","後測 IPE","差異","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i?"num":""},h)));
   t.appendChild(el("thead")).appendChild(hr); const tb=el("tbody"); t.appendChild(tb);
-  ses.slice().reverse().forEach(s=>{ const tr=el("tr"); tr.appendChild(el("td",{},s.d)); [s.np,s.nq,s.ns,f2(s.a),f2(s.b)].forEach(v=>tr.appendChild(el("td",{class:"num"},v)));
-    const dt=el("td",{class:"num"}); dt.appendChild(deltaSpan(s.a!=null&&s.b!=null?s.b-s.a:null)); tr.appendChild(dt); tr.appendChild(el("td",{class:"num"},f2(s.sat))); tr.appendChild(el("td",{class:"num"},f2(s.ov))); tb.appendChild(tr); });
+  ses.slice().reverse().forEach(s=>{ const tr=el("tr"); tr.appendChild(el("td",{},s.d)); [s.np,s.nq,f2(s.a),f2(s.b)].forEach(v=>tr.appendChild(el("td",{class:"num"},v)));
+    const dt=el("td",{class:"num"}); dt.appendChild(deltaSpan(s.a!=null&&s.b!=null?s.b-s.a:null)); tr.appendChild(dt); tr.appendChild(el("td",{class:"num"},f2(s.ov))); tb.appendChild(tr); });
   const all = ses; ses = ses.filter(s=>s.np>=MIN_N||s.nq>=MIN_N);
   if(!ses.length){ node.appendChild(el("div",{class:"empty"},"目前沒有資料")); return; }
   const W = node.clientWidth||700, H = 230, L = 36, R = 54, T = 14, B = 34;
@@ -540,40 +527,12 @@ function hbars(node, items, opts){
   });
   node.appendChild(svg);
 }
-function renderSat(post){
-  const items = SAT.map((l,i)=>{ const v = post.map(r=>num(r["sat"+(i+1)])).filter(x=>x!=null); return {label:l, v:mean(v), n:v.length, tip:[{k:`平均（n=${v.length}）`,v:f2(mean(v))},{k:"4–5 分比例",v:v.length?pct(v.filter(x=>x>=4).length/v.length):"–"}]}; });
-  hbars($("#satChart"), items, {max:5, ticks:[0,1,2,3,4,5], fmt:it=>f2(it.v), labW:230, aria:"課程滿意度各題平均", empty:"目前篩選範圍內還沒有 9 題滿意度的資料。這 9 題是新版問卷才加入的，舊的 IPE 匯入資料沒有這部分；有人用新問卷填後測後就會出現。"});
+function renderOverall(post){
   const ov = post.map(r=>num(r.overall)).filter(x=>x!=null);
   $("#ovDesc").textContent = ov.length ? `n=${ov.length}，平均 ${f2(mean(ov))}，4–5 分占 ${pct(ov.filter(x=>x>=4).length/ov.length)}。` : "";
   const lbl = ["非常不滿意","不滿意","普通","滿意","非常滿意"];
   const items2 = [5,4,3,2,1].map(s=>{ const c = ov.filter(x=>x===s).length; return {label:`${s} 分・${lbl[s-1]}`, v: ov.length? c/ov.length : null, c, tip:[{k:"人數",v:String(c)},{k:"比例",v:ov.length?pct(c/ov.length):"–"}]}; });
-  hbars($("#ovChart"), ov.length?items2:[], {max:1, ticks:[0,.25,.5,.75,1], tickFmt:t=>(t*100)+"%", fmt:it=>`${pct(it.v)}（${it.c}）`, labW:130, color:"--post", aria:"整體滿意度分布"});
-}
-
-function renderSatTrend(rows){
-  const node = clear($("#satTrend")), by = {};
-  rows.forEach(r=>{ if(num(r.satAvg)!=null) (by[r.courseDate]=by[r.courseDate]||[]).push(r); });
-  const pts = Object.keys(by).sort().map(d=>({d, n:by[d].length, v:mean(by[d].map(r=>num(r.satAvg))), ov:mean(by[d].map(r=>num(r.overall)).filter(x=>x!=null))})).filter(p=>p.n>=MIN_N);
-  if(!pts.length){ node.appendChild(el("div",{class:"empty"},"目前篩選範圍內沒有 9 題滿意度資料")); return; }
-  const W = node.clientWidth||700, H = 210, L = 36, R = 20, T = 22, B = 34;
-  const lo = Math.max(1, Math.min(4, Math.floor(Math.min(...pts.map(p=>p.v))*2)/2-.5)), hi = 5;
-  const x = i => pts.length===1 ? L+(W-L-R)/2 : L + i*(W-L-R)/(pts.length-1), y = v => T + (hi-v)/(hi-lo)*(H-T-B);
-  const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"歷次課程滿意度趨勢"});
-  for(let v=lo; v<=hi+1e-9; v+=.5){ svg.appendChild(el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--grid")})); svg.appendChild(el("text",{x:L-8,y:y(v)+4,"text-anchor":"end","font-size":11,fill:css("--muted")},v.toFixed(1))); }
-  const step = Math.ceil(pts.length / Math.max(1, Math.floor((W-L-R)/70)));
-  pts.forEach((p,i)=>{ if(i%step===0||i===pts.length-1) svg.appendChild(el("text",{x:x(i),y:H-12,"text-anchor":"middle","font-size":11,fill:css("--muted")},p.d.slice(2).replace(/-/g,"/"))); });
-  const cross = el("line",{y1:T,y2:H-B,stroke:css("--muted"),"stroke-width":1,"stroke-dasharray":"3 3",opacity:0}); svg.appendChild(cross);
-  if(pts.length>1) svg.appendChild(el("polyline",{points:pts.map((p,i)=>`${x(i)},${y(p.v)}`).join(" "),fill:"none",stroke:css("--post"),"stroke-width":2,"stroke-linejoin":"round"}));
-  pts.forEach((p,i)=>svg.appendChild(el("circle",{cx:x(i),cy:y(p.v),r:4.5,fill:css("--post"),stroke:css("--card"),"stroke-width":2})));
-  const iMax = pts.reduce((b,p,i)=>p.v>pts[b].v?i:b,0), iMin = pts.reduce((b,p,i)=>p.v<pts[b].v?i:b,0);
-  [[iMax,-10],[iMin,18]].forEach(([i,dy])=>{ if(pts.length>1) svg.appendChild(el("text",{x:x(i),y:y(pts[i].v)+dy,"text-anchor":"middle","font-size":12,"font-weight":700,fill:css("--ink2")},f2(pts[i].v))); });
-  const hit = el("rect",{x:L-10,y:0,width:W-L-R+20,height:H,fill:"transparent"}); hit.__cross = true; svg.appendChild(hit);
-  hit.addEventListener("pointermove", e=>{ const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)*(W/r.width);
-    let bi=0, bd=1e9; pts.forEach((p,i)=>{ const d=Math.abs(x(i)-px); if(d<bd){bd=d;bi=i;} }); const p=pts[bi];
-    cross.setAttribute("x1",x(bi)); cross.setAttribute("x2",x(bi)); cross.setAttribute("opacity",1);
-    showTip({title:`課程日期 ${p.d}`, rows:[{k:`9 題平均（n=${p.n}）`,v:f2(p.v),c:css("--post")},{k:"整體滿意度",v:f2(p.ov)}]}, e.clientX, e.clientY); });
-  hit.addEventListener("pointerleave", ()=>{ cross.setAttribute("opacity",0); tip.style.display="none"; });
-  node.appendChild(svg);
+  hbars($("#ovChart"), ov.length?items2:[], {max:1, ticks:[0,.25,.5,.75,1], tickFmt:t=>(t*100)+"%", fmt:it=>`${pct(it.v)}（${it.c}）`, labW:120, color:"--post", aria:"整體滿意度分布"});
 }
 function renderMulti(node, post, key, opts, multi){
   const n = post.filter(r=>r[key]).length;
@@ -591,8 +550,8 @@ function renderComments(post){
 
 /* ---------- CSV ---------- */
 $("#csvBtn").addEventListener("click", ()=>{
-  const rows = filtered(false), cols = ["courseDate","phase","identity","unit","job",...DIMS.map(d=>d[0]),"ipeAvg","gain","teamBest",...SAT.map((_,i)=>"sat"+(i+1)),"satAvg","overall","comment","pid"];
-  const head = ["課程日期","測驗階段","身分別","單位科別","職類",...DIMS.map(d=>d[1]),"IPE平均","最具收穫環節","團隊最出色面向",...SAT,"滿意度平均","整體滿意度","回饋意見","配對代碼"];
+  const rows = filtered(false), cols = ["courseDate","phase","identity","unit","job",...DIMS.map(d=>d[0]),"ipeAvg","gain","teamBest","overall","comment","pid"];
+  const head = ["課程日期","測驗階段","身分別","單位科別","職類",...DIMS.map(d=>d[1]),"IPE平均","最具收穫環節","團隊最出色面向","整體滿意度","可加強或改進的面向","配對代碼"];
   const esc = v => { v = v==null?"":String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
   const csv = "﻿" + [head, ...rows.map(r=>cols.map(c=>r[c]))].map(r=>r.map(esc).join(",")).join("\n");
   const a = el("a",{href:URL.createObjectURL(new Blob([csv],{type:"text/csv"})),download:`IPE問卷_${new Date().toISOString().slice(0,10)}.csv`}); document.body.appendChild(a); a.click(); a.remove();
