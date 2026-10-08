@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPE 成效儀表板</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Playfair+Display:ital,wght@1,700;1,900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --vermilion:#DD5426; --coral:#EE6B5E; --mustard:#EDA93A;
+  --pre:#E09A2A; --post:#C2401A; --neg:#3D6FA8; --mid:#ece6df;
+  --ink:#1a1a1a; --ink2:#4d4540; --muted:#857a72; --line:#ebe3da; --grid:#f0ebe5;
+  --bg:#FBF6EF; --card:#ffffff; --hover:#fbf1e8;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --pre:#E9A53A; --post:#F0663E; --neg:#6E9BD3; --mid:#3a3532;
+    --ink:#f3eee9; --ink2:#cfc6be; --muted:#a2978e; --line:#3a3431; --grid:#2e2926;
+    --bg:#171412; --card:#211d1b; --hover:#2c2623;
+  }
+}
+:root[data-theme="dark"]{
+  --pre:#E9A53A; --post:#F0663E; --neg:#6E9BD3; --mid:#3a3532;
+  --ink:#f3eee9; --ink2:#cfc6be; --muted:#a2978e; --line:#3a3431; --grid:#2e2926;
+  --bg:#171412; --card:#211d1b; --hover:#2c2623;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+.serif{font-family:"Playfair Display",Georgia,serif;font-style:italic}
+/* header band */
+.band{display:grid;grid-template-columns:2.2fr .6fr .6fr;color:#fff}
+.band > div{padding:20px 22px;position:relative;overflow:hidden}
+.b1{background:var(--vermilion)} .b2{background:var(--coral)} .b3{background:var(--mustard)}
+.band h1{margin:0;font-weight:900;font-size:clamp(24px,4vw,36px);letter-spacing:.02em;line-height:1.15}
+.band .script{font-family:"Playfair Display",serif;font-style:italic;font-weight:900;color:#1a1a1a;font-size:clamp(15px,2.2vw,20px)}
+.band .meta{font-size:13px;margin-top:6px;color:rgba(255,255,255,.88)}
+.band .big{font-weight:900;font-size:clamp(40px,7vw,64px);line-height:1}
+.band .lab{font-family:"Playfair Display",serif;font-style:italic;font-weight:900;color:#1a1a1a;font-size:15px}
+@media(max-width:640px){.band{grid-template-columns:1fr 1fr}.b1{grid-column:1/-1}.b2,.b3{padding:12px 18px}}
+.wrap{max-width:1240px;margin:0 auto;padding:18px 16px 40px}
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:18px}
+.filters label{display:flex;flex-direction:column;font-size:12.5px;color:var(--muted);font-weight:700;gap:4px}
+.filters select,.filters input{font:inherit;font-size:14.5px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-width:130px}
+.filters select:focus,.filters input:focus{outline:none;border-color:var(--vermilion)}
+.fbtn{font:inherit;font-size:14px;font-weight:700;padding:9px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.fbtn:hover{border-color:var(--vermilion)}
+.fbtn.dark{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.spacer{flex:1}
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border-radius:10px;padding:14px 16px;border-top:4px solid var(--line)}
+.kpi .k{font-size:13px;color:var(--muted);font-weight:700}
+.kpi .v{font-size:30px;font-weight:900;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12.5px;color:var(--ink2)}
+.kpi.pre{border-top-color:var(--pre)} .kpi.post{border-top-color:var(--post)} .kpi.hl{border-top-color:var(--ink)}
+.up{color:var(--post);font-weight:700} .down{color:var(--neg);font-weight:700}
+/* cards */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:18px 18px 16px;margin-bottom:18px;min-width:0}
+.ch{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:4px}
+.ch h2{margin:0;font-size:17.5px;font-weight:900}
+.ch .tag{font-family:"Playfair Display",serif;font-style:italic;font-weight:900;color:var(--vermilion);font-size:14px}
+.desc{font-size:13px;color:var(--muted);margin:0 0 12px}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--ink2);flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-left:auto}
+.seg button{font:inherit;font-size:13px;padding:5px 12px;border:none;background:transparent;color:var(--ink2);cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--bg);font-weight:700}
+svg{display:block;overflow:visible}
+svg text{font-family:inherit;fill:var(--ink2)}
+.chart{width:100%}
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-weight:700;color:var(--muted);font-size:12.5px;padding:8px 8px;border-bottom:1.5px solid var(--line);white-space:nowrap}
+td{padding:8px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+td.num,th.num{text-align:right}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--hover)}
+tr.sel td{background:var(--hover);font-weight:700}
+.sig{font-weight:900;color:var(--post)}
+.note{font-size:12.5px;color:var(--muted);margin-top:8px}
+.details{margin-top:10px}
+.details summary{cursor:pointer;font-size:13px;color:var(--ink2);font-weight:700}
+/* comments */
+.comments{max-height:420px;overflow:auto;display:grid;gap:8px}
+.cmt{border-left:3px solid var(--mustard);padding:6px 10px;background:var(--bg);border-radius:0 6px 6px 0}
+.cmt .m{font-size:12px;color:var(--muted)}
+.cmt .t{font-size:14px;white-space:pre-wrap}
+/* tooltip */
+#tip{position:fixed;pointer-events:none;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.14);border-radius:8px;padding:8px 10px;font-size:13px;z-index:50;display:none;min-width:120px}
+#tip .tt{font-size:12px;color:var(--muted);margin-bottom:4px}
+#tip .row{display:flex;align-items:center;gap:8px}
+#tip .row b{font-size:15px;font-variant-numeric:tabular-nums}
+#tip .row s{display:inline-block;width:14px;height:3px;border-radius:2px;text-decoration:none}
+#tip .row span{color:var(--ink2)}
+.loading{opacity:.45;transition:opacity .2s}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+#msg{padding:14px 16px;border-radius:10px;background:var(--card);margin-bottom:16px;display:none;border-left:4px solid var(--vermilion)}
+footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30px}
+</style>
+</head>
+<body>
+<header class="band">
+  <div class="b1">
+    <div class="script">Interprofessional Education</div>
+    <h1>院級跨領域 IPE 成效儀表板</h1>
+    <div class="meta" id="updated">資料載入中…</div>
+  </div>
+  <div class="b2"><div class="lab">Pre-test</div><div class="big">前</div></div>
+  <div class="b3"><div class="lab">Post-test</div><div class="big">後</div></div>
+</header>
+
+<div class="wrap">
+  <div class="filters">
+    <label>期間
+      <select id="fPeriod">
+        <option value="all">全部</option><option value="90">近 3 個月</option><option value="180">近 6 個月</option>
+        <option value="year">今年</option><option value="custom">自訂…</option>
+      </select></label>
+    <label id="lFrom" hidden>起<input type="date" id="fFrom"></label>
+    <label id="lTo" hidden>迄<input type="date" id="fTo"></label>
+    <label>課程場次<select id="fSession"></select></label>
+    <label>職類<select id="fJob"></select></label>
+    <label>身分別<select id="fId"></select></label>
+    <button class="fbtn" id="clearBtn">清除篩選</button>
+    <span class="spacer"></span>
+    <button class="fbtn" id="csvBtn">下載篩選資料 CSV</button>
+    <button class="fbtn dark" id="reloadBtn">重新整理</button>
+  </div>
+
+  <div id="msg"></div>
+
+  <div id="main">
+    <div class="kpis" id="kpis"></div>
+
+    <section class="card">
+      <div class="ch"><span class="tag">Pre vs Post</span><h2>六大面向前後測比較</h2>
+        <div class="seg" id="cmpMode"><button data-v="all" class="on">全部填答</button><button data-v="paired">僅配對成功者</button></div></div>
+      <p class="desc" id="cmpDesc"></p>
+      <div class="legend" id="dimLegend"></div>
+      <div class="chart" id="dimChart"></div>
+      <div class="tbl-wrap" style="margin-top:12px"><table id="pairTbl"></table></div>
+      <p class="note">配對：同一人（人事號＋姓名）的後測，對應到課程日期在 14 天內、最接近的前測。p 值為配對 t 檢定（雙尾），<span class="sig">*</span> p&lt;.05、<span class="sig">**</span> p&lt;.01、<span class="sig">***</span> p&lt;.001；d 為配對效果量。</p>
+    </section>
+
+    <section class="card">
+      <div class="ch"><span class="tag">By Profession</span><h2>各職類分析</h2></div>
+      <p class="desc">點選任一列，即可把整個儀表板篩選為該職類；再點一次取消。本表不受「職類」篩選影響。</p>
+      <div class="legend" style="margin-bottom:6px"><span><i style="background:var(--pre)"></i>前測 IPE 平均</span><span><i style="background:var(--post)"></i>後測 IPE 平均</span></div>
+      <div class="tbl-wrap"><table id="jobTbl"></table></div>
+    </section>
+
+    <section class="card">
+      <div class="ch"><span class="tag">Change Map</span><h2>職類 × 面向：後測－前測差異</h2></div>
+      <p class="desc">顏色越紅代表後測提升越多，藍色代表下降。只顯示前、後測各至少 3 份的職類。</p>
+      <div class="chart" id="heat"></div>
+    </section>
+
+    <section class="card">
+      <div class="ch"><span class="tag">By Session</span><h2>各場次前後測 IPE 平均</h2></div>
+      <div class="legend" style="margin-bottom:4px"><span><i style="background:var(--pre)"></i>前測</span><span><i style="background:var(--post)"></i>後測</span></div>
+      <div class="chart" id="trend"></div>
+      <p class="note">圖中只畫出該階段至少 3 份的場次（零星補填的日期仍列在下方數據表）。</p>
+      <details class="details"><summary>查看各場次數據表</summary><div class="tbl-wrap"><table id="sessTbl"></table></div></details>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <div class="ch"><span class="tag">Satisfaction</span><h2>課程滿意度（各題平均）</h2></div>
+        <p class="desc">5 分量表，僅後測填答。</p>
+        <div class="chart" id="satChart"></div>
+      </section>
+      <section class="card">
+        <div class="ch"><span class="tag">Overall</span><h2>整體滿意度分布</h2></div>
+        <p class="desc" id="ovDesc"></p>
+        <div class="chart" id="ovChart"></div>
+      </section>
+    </div>
+
+    <div class="grid2">
+      <section class="card">
+        <div class="ch"><span class="tag">Takeaways</span><h2>最具收穫的環節（可複選）</h2></div>
+        <p class="desc">占後測填答人數的百分比。</p>
+        <div class="chart" id="gainChart"></div>
+      </section>
+      <section class="card">
+        <div class="ch"><span class="tag">Teamwork</span><h2>團隊表現最出色的面向</h2></div>
+        <p class="desc">占後測填答人數的百分比。</p>
+        <div class="chart" id="teamChart"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="ch"><span class="tag">Voices</span><h2>改進建議／回饋意見</h2><span class="desc" id="cmtCount" style="margin:0"></span></div>
+      <div class="comments" id="comments"></div>
+    </section>
+  </div>
+</div>
+<footer>奇美醫院 教學部</footer>
+<div id="tip"></div>
+
+<script>
+/* ★ 與問卷相同的 GAS 網址（部署新版本後網址不變） */
+const GAS_URL = "https://script.google.com/macros/s/AKfycby7zSy8dfboib32GUJ8ZIDxNhAHMcpqMsG8i3ErORlaJl7D4ByPw3ImrjHY1auN2_aD/exec";
+
+const DIMS = [["ipe1","專業認同"],["ipe2","協作行為"],["ipe3","心理安全"],["ipe4","全人整合"],["ipe5","團隊整合"],["ipe6","能力轉移"]];
+const SAT = ["時數安排適當","內容準備充分","內容對臨床工作有幫助","會議所提供之硬體設備充足","會議活動安排適當","報告者具教學熱忱","報告者具備豐富知識","報告者內容清晰有條理，能掌握重點","會議回饋方式及內容充實"];
+const GAIN = ["專業角色介紹與理解","個案討論與分析","共同制定照護計畫","與不同專業背景成員的自由交流","協作技巧演練"];
+const TEAM = ["相互尊重與信任","訊息共享與記錄","共同目標設定","決策過程與共識達成","衝突處理與解決"];
+const PAIR_DAYS = 14, MIN_N = 3;
+
+let ALL = [], cmpMode = "all";
+const $ = s => document.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- helpers ---------- */
+const num = v => { const n = Number(v); return v === "" || v == null || isNaN(n) ? null : n; };
+const mean = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : null;
+const sd = a => { if(a.length<2) return null; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); };
+const f2 = v => v==null ? "–" : v.toFixed(2);
+const pct = v => v==null ? "–" : (v*100).toFixed(0)+"%";
+const jobGroup = j => { j = String(j||"").trim(); return !j ? "未填" : j.startsWith("其他") ? "其他" : j; };
+const dayDiff = (a,b) => (new Date(b) - new Date(a)) / 864e5;
+const ipeAvg = r => { const v = DIMS.map(d=>num(r[d[0]])); return v.every(x=>x!=null) ? mean(v) : null; };
+function el(tag, attrs={}, text){ const ns = ["svg","g","rect","circle","line","text","path","polyline"].includes(tag) ? "http://www.w3.org/2000/svg" : null;
+  const e = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]); if(text!=null) e.textContent = text; return e; }
+function clear(n){ while(n.firstChild) n.removeChild(n.firstChild); return n; }
+
+/* ---------- stats: paired t-test ---------- */
+function lnGamma(z){ const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(z<0.5) return Math.log(Math.PI/Math.sin(Math.PI*z))-lnGamma(1-z); z-=1; let x=c[0]; for(let i=1;i<g+2;i++) x+=c[i]/(z+i); const t=z+g+0.5; return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x); }
+function betacf(a,b,x){ let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap; if(Math.abs(d)<1e-30)d=1e-30; d=1/d; let h=d;
+  for(let m=1;m<=200;m++){ const m2=2*m; let aa=m*(b-m)*x/((qam+m2)*(a+m2)); d=1+aa*d; if(Math.abs(d)<1e-30)d=1e-30; c=1+aa/c; if(Math.abs(c)<1e-30)c=1e-30; d=1/d; h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2)); d=1+aa*d; if(Math.abs(d)<1e-30)d=1e-30; c=1+aa/c; if(Math.abs(c)<1e-30)c=1e-30; d=1/d; const del=d*c; h*=del; if(Math.abs(del-1)<3e-12) break; } return h; }
+function ibeta(x,a,b){ if(x<=0) return 0; if(x>=1) return 1; const bt=Math.exp(lnGamma(a+b)-lnGamma(a)-lnGamma(b)+a*Math.log(x)+b*Math.log(1-x));
+  return x<(a+1)/(a+b+2) ? bt*betacf(a,b,x)/a : 1-bt*betacf(b,a,1-x)/b; }
+function pairedT(pre, post){ const d = pre.map((x,i)=>post[i]-x), n=d.length; if(n<2) return {n}; const md=mean(d), s=sd(d);
+  if(!s) return {n, md, p: md===0?1:0, d: null}; const t = md/(s/Math.sqrt(n)), df=n-1; return {n, md, t, p: ibeta(df/(df+t*t), df/2, 0.5), d: md/s}; }
+const stars = p => p==null ? "" : p<.001 ? "***" : p<.01 ? "**" : p<.05 ? "*" : "";
+const pfmt = p => p==null ? "–" : p<.001 ? "<.001" : p.toFixed(3).replace(/^0/,"");
+
+/* ---------- tooltip ---------- */
+const tip = $("#tip");
+function setTip(node, title, rows){ node.__tip = {title, rows}; node.setAttribute("tabindex","0"); }
+function showTip(t, x, y){ clear(tip); tip.appendChild(el("div",{class:"tt"}, t.title));
+  t.rows.forEach(r=>{ const row = el("div",{class:"row"}); if(r.c){ const s=el("s"); s.style.background=r.c; row.appendChild(s);} row.appendChild(el("b",{},r.v)); row.appendChild(el("span",{},r.k)); tip.appendChild(row); });
+  tip.style.display="block"; const w=tip.offsetWidth, h=tip.offsetHeight; let L=x+14, T=y+14; if(L+w>innerWidth-8) L=x-w-14; if(T+h>innerHeight-8) T=y-h-14; tip.style.left=L+"px"; tip.style.top=T+"px"; }
+document.addEventListener("pointermove", e=>{ const n = e.target.closest && e.target.closest("[tabindex]"); if(n && n.__tip && !n.__cross) showTip(n.__tip, e.clientX, e.clientY); else if(!(n&&n.__cross)) tip.style.display="none"; });
+document.addEventListener("focusin", e=>{ const n=e.target; if(n.__tip){ const r=n.getBoundingClientRect(); showTip(n.__tip, r.right, r.top); } });
+document.addEventListener("focusout", ()=>tip.style.display="none");
+
+/* ---------- data load ---------- */
+async function load(){
+  $("#main").classList.add("loading"); $("#msg").style.display="none";
+  try{
+    const res = await fetch(GAS_URL + "?action=data&t=" + Date.now());
+    const j = await res.json(); if(!j.ok) throw new Error(j.error || "讀取失敗");
+    ALL = (j.rows||[]).map(r=>{ r.courseDate = String(r.courseDate||r.timestamp||"").slice(0,10); r.jobG = jobGroup(r.job); r.avg = ipeAvg(r); return r; }).filter(r=>r.phase==="前測"||r.phase==="後測");
+    $("#updated").textContent = `資料更新：${j.updated||"—"}　共 ${ALL.length} 筆`;
+    buildFilterOptions(); render();
+  }catch(err){
+    $("#msg").style.display="block"; $("#msg").textContent = "資料讀取失敗：" + err.message + "（請確認 GAS 已部署新版本，且存取權為「所有人」）";
+    $("#updated").textContent = "資料讀取失敗";
+  }
+  $("#main").classList.remove("loading");
+}
+
+function fillSelect(sel, opts, keep){ const cur = keep ? sel.value : ""; clear(sel); opts.forEach(([v,t])=>sel.appendChild(el("option",{value:v},t))); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
+function buildFilterOptions(){
+  const cnt = k => ALL.reduce((m,r)=>(m[r[k]]=(m[r[k]]||0)+1,m),{});
+  const jobs = cnt("jobG"), ids = cnt("identity"), ses = cnt("courseDate");
+  fillSelect($("#fJob"), [["","全部職類"], ...Object.keys(jobs).sort((a,b)=>jobs[b]-jobs[a]).map(k=>[k,`${k}（${jobs[k]}）`])], true);
+  fillSelect($("#fId"), [["","全部"], ...Object.keys(ids).filter(k=>k).map(k=>[k,`${k}（${ids[k]}）`])], true);
+  fillSelect($("#fSession"), [["","全部場次"], ...Object.keys(ses).sort().reverse().map(k=>[k,`${k}（${ses[k]}）`])], true);
+}
+
+function filtered(skipJob){
+  const p = $("#fPeriod").value, today = new Date(); let from="", to="";
+  if(p==="90"||p==="180"){ const d=new Date(today-Number(p)*864e5); from=d.toISOString().slice(0,10); }
+  else if(p==="year"){ from = today.getFullYear()+"-01-01"; }
+  else if(p==="custom"){ from=$("#fFrom").value; to=$("#fTo").value; }
+  const s=$("#fSession").value, j=$("#fJob").value, id=$("#fId").value;
+  return ALL.filter(r=> (!from||r.courseDate>=from) && (!to||r.courseDate<=to) && (!s||r.courseDate===s) && (skipJob||!j||r.jobG===j) && (!id||r.identity===id));
+}
+
+/* 配對：每筆後測找同 pid、課程日期在 14 天內且最接近（不晚於後測）的前測 */
+function makePairs(rows){
+  const pres = {}; rows.filter(r=>r.phase==="前測"&&r.pid).forEach(r=>(pres[r.pid]=pres[r.pid]||[]).push(r));
+  const used = new Set(), pairs=[];
+  rows.filter(r=>r.phase==="後測"&&r.pid).sort((a,b)=>a.timestamp<b.timestamp?-1:1).forEach(post=>{
+    const c = (pres[post.pid]||[]).filter(p=>!used.has(p) && p.timestamp<=post.timestamp && dayDiff(p.courseDate, post.courseDate) <= PAIR_DAYS)
+      .sort((a,b)=>a.timestamp<b.timestamp?1:-1)[0];
+    if(c){ used.add(c); pairs.push({pre:c, post}); }
+  });
+  return pairs;
+}
+
+/* ---------- render ---------- */
+function render(){
+  const rows = filtered(false), pre = rows.filter(r=>r.phase==="前測"), post = rows.filter(r=>r.phase==="後測");
+  const pairs = makePairs(rows);
+  renderKPIs(pre, post, pairs);
+  renderDims(pre, post, pairs);
+  renderJobs();
+  renderHeat(filtered(true));
+  renderTrend(rows);
+  renderSat(post);
+  renderMulti($("#gainChart"), post, "gain", GAIN, true);
+  renderMulti($("#teamChart"), post, "teamBest", TEAM, false);
+  renderComments(post);
+}
+
+function kpi(cls, k, v, s){ const d = el("div",{class:"kpi "+cls}); d.appendChild(el("div",{class:"k"},k)); d.appendChild(el("div",{class:"v"},v)); const sEl=el("div",{class:"s"}); if(s instanceof Node) sEl.appendChild(s); else sEl.textContent=s||""; d.appendChild(sEl); return d; }
+function deltaSpan(dv, suffix=""){ const s = el("span",{class: dv>0?"up":dv<0?"down":""}, dv==null?"–":(dv>0?"▲ +":dv<0?"▼ ":"")+dv.toFixed(2)+suffix); return s; }
+function renderKPIs(pre, post, pairs){
+  const box = clear($("#kpis"));
+  const mPre = mean(pre.map(r=>r.avg).filter(x=>x!=null)), mPost = mean(post.map(r=>r.avg).filter(x=>x!=null));
+  const ov = post.map(r=>num(r.overall)).filter(x=>x!=null), sat = post.map(r=>num(r.satAvg)).filter(x=>x!=null);
+  const pd = pairs.map(p=>p.post.avg-p.pre.avg).filter(x=>!isNaN(x));
+  box.appendChild(kpi("pre","前測份數", pre.length, ""));
+  box.appendChild(kpi("post","後測份數", post.length, pre.length? `後測／前測 ${pct(post.length/pre.length)}` : ""));
+  box.appendChild(kpi("hl","配對成功", pairs.length, post.length? `占後測 ${pct(pairs.length/post.length)}` : ""));
+  const w = el("span"); w.appendChild(document.createTextNode(`前 ${f2(mPre)} → 後 ${f2(mPost)}　`)); w.appendChild(deltaSpan(mPre!=null&&mPost!=null?mPost-mPre:null));
+  box.appendChild(kpi("post","IPE 後測平均", f2(mPost), w));
+  const w2 = el("span"); w2.appendChild(document.createTextNode("配對者平均提升 ")); w2.appendChild(deltaSpan(pd.length?mean(pd):null));
+  box.appendChild(kpi("hl","配對個人進步", pd.length? pct(pd.filter(x=>x>0).length/pd.length) : "–", pd.length ? (()=>{ const s=el("span"); s.appendChild(document.createTextNode("後測高於前測的比例・")); s.appendChild(deltaSpan(mean(pd))); return s; })() : "尚無配對資料"));
+  box.appendChild(kpi("post","整體滿意度", f2(mean(ov)), ov.length? `n=${ov.length}　4–5 分 ${pct(ov.filter(x=>x>=4).length/ov.length)}` : ""));
+}
+
+function legendDots(node){ clear(node); [["前測","--pre"],["後測","--post"]].forEach(([t,c])=>{ const s=el("span"); const i=el("i"); i.style.background=`var(${c})`; s.appendChild(i); s.appendChild(document.createTextNode(t)); node.appendChild(s); }); }
+
+/* 啞鈴圖 */
+function dumbbell(node, items, opts={}){
+  clear(node); if(!items.length){ node.appendChild(el("div",{class:"empty"},"目前沒有資料")); return; }
+  const W = node.clientWidth || 700, labW = opts.labW || 92, rh = 40, top = 22, H = top + items.length*rh + 8;
+  const vals = items.flatMap(i=>[i.a,i.b]).filter(v=>v!=null);
+  const lo = Math.max(1, Math.floor(Math.min(...vals)*2)/2 - .5), hi = 5;
+  const x = v => labW + (v-lo)/(hi-lo)*(W-labW-46);
+  const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":opts.aria||"前後測比較"});
+  for(let t=lo;t<=hi+1e-9;t+=.5){ svg.appendChild(el("line",{x1:x(t),x2:x(t),y1:top-6,y2:H-6,stroke:css("--grid"),"stroke-width":1}));
+    svg.appendChild(el("text",{x:x(t),y:12,"text-anchor":"middle","font-size":11,fill:css("--muted")},t.toFixed(1))); }
+  items.forEach((it,i)=>{
+    const y = top + i*rh + rh/2, g = el("g");
+    g.appendChild(el("text",{x:0,y:y+4,"font-size":13.5,fill:css("--ink"),"font-weight":700},it.label));
+    if(it.a!=null && it.b!=null) g.appendChild(el("line",{x1:x(it.a),x2:x(it.b),y1:y,y2:y,stroke:css("--line"),"stroke-width":4,"stroke-linecap":"round"}));
+    const up = it.b!=null && it.a!=null ? it.b>=it.a : true;
+    [[it.a,"--pre",up?"end":"start",up?-10:10],[it.b,"--post",up?"start":"end",up?10:-10]].forEach(([v,c,anc,dx])=>{
+      if(v==null) return; g.appendChild(el("circle",{cx:x(v),cy:y,r:6.5,fill:css(c),stroke:css("--card"),"stroke-width":2}));
+      g.appendChild(el("text",{x:x(v)+dx,y:y+4,"text-anchor":anc,"font-size":12.5,fill:css("--ink2"),"font-weight":700},f2(v)));
+    });
+    const hit = el("rect",{x:0,y:y-rh/2,width:W,height:rh,fill:"transparent"});
+    setTip(hit, it.label, [{k:`前測${it.na!=null?`（n=${it.na}）`:""}`,v:f2(it.a),c:css("--pre")},{k:`後測${it.nb!=null?`（n=${it.nb}）`:""}`,v:f2(it.b),c:css("--post")},{k:"差異",v:it.a!=null&&it.b!=null?(it.b-it.a>=0?"+":"")+(it.b-it.a).toFixed(2):"–"}]);
+    g.appendChild(hit); svg.appendChild(g);
+  });
+  node.appendChild(svg);
+}
+
+function renderDims(pre, post, pairs){
+  legendDots($("#dimLegend"));
+  let items;
+  if(cmpMode==="paired"){
+    items = DIMS.map(([k,l])=>{ const ps = pairs.filter(p=>num(p.pre[k])!=null&&num(p.post[k])!=null);
+      return {label:l, a:mean(ps.map(p=>num(p.pre[k]))), b:mean(ps.map(p=>num(p.post[k]))), na:ps.length, nb:ps.length}; });
+    $("#cmpDesc").textContent = `僅納入前後測都有填的 ${pairs.length} 人，最能反映個人改變。`;
+  }else{
+    items = DIMS.map(([k,l])=>{ const a = pre.map(r=>num(r[k])).filter(v=>v!=null), b = post.map(r=>num(r[k])).filter(v=>v!=null); return {label:l, a:mean(a), b:mean(b), na:a.length, nb:b.length}; });
+    $("#cmpDesc").textContent = `所有前測（${pre.length} 份）與後測（${post.length} 份）的平均。`;
+  }
+  items.push({label:"六面向平均", a:mean(items.map(i=>i.a).filter(v=>v!=null)), b:mean(items.map(i=>i.b).filter(v=>v!=null))});
+  if(items.every(i=>i.a==null&&i.b==null)) items=[];
+  dumbbell($("#dimChart"), items);
+
+  const t = clear($("#pairTbl")); const hr = el("tr"); ["面向（配對 t 檢定）","n","前測","後測","差異","p 值","效果量 d"].forEach((h,i)=>hr.appendChild(el("th",{class:i?"num":""},h))); t.appendChild(el("thead")).appendChild(hr);
+  const tb = el("tbody"); t.appendChild(tb);
+  [...DIMS, ["avg","六面向平均"]].forEach(([k,l])=>{
+    const ps = pairs.map(p=>k==="avg"?[p.pre.avg,p.post.avg]:[num(p.pre[k]),num(p.post[k])]).filter(([a,b])=>a!=null&&b!=null);
+    const r = pairedT(ps.map(x=>x[0]), ps.map(x=>x[1])); const tr = el("tr");
+    tr.appendChild(el("td",{style:k==="avg"?"font-weight:700":""},l)); tr.appendChild(el("td",{class:"num"},r.n));
+    tr.appendChild(el("td",{class:"num"},f2(mean(ps.map(x=>x[0]))))); tr.appendChild(el("td",{class:"num"},f2(mean(ps.map(x=>x[1])))));
+    const dtd = el("td",{class:"num"}); dtd.appendChild(deltaSpan(r.md??null)); tr.appendChild(dtd);
+    const ptd = el("td",{class:"num"}, pfmt(r.p)); if(stars(r.p)) ptd.appendChild(el("span",{class:"sig"}," "+stars(r.p))); tr.appendChild(ptd);
+    tr.appendChild(el("td",{class:"num"}, r.d==null?"–":r.d.toFixed(2))); tb.appendChild(tr);
+  });
+}
+
+function miniDumbbell(a, b){
+  const W=170,H=22, lo=2.5, hi=5, x=v=>6+(Math.max(lo,v)-lo)/(hi-lo)*(W-12);
+  const s = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,"aria-hidden":"true"});
+  s.appendChild(el("line",{x1:6,x2:W-6,y1:H/2,y2:H/2,stroke:css("--grid"),"stroke-width":1}));
+  if(a!=null&&b!=null) s.appendChild(el("line",{x1:x(a),x2:x(b),y1:H/2,y2:H/2,stroke:css("--line"),"stroke-width":4,"stroke-linecap":"round"}));
+  if(a!=null) s.appendChild(el("circle",{cx:x(a),cy:H/2,r:5,fill:css("--pre"),stroke:css("--card"),"stroke-width":1.5}));
+  if(b!=null) s.appendChild(el("circle",{cx:x(b),cy:H/2,r:5,fill:css("--post"),stroke:css("--card"),"stroke-width":1.5}));
+  return s;
+}
+function renderJobs(){
+  const rows = filtered(true), sel = $("#fJob").value, groups = {};
+  rows.forEach(r=>(groups[r.jobG]=groups[r.jobG]||[]).push(r));
+  const t = clear($("#jobTbl")); const hr = el("tr");
+  ["職類","前測 n","後測 n","配對 n","前測","後測","前→後（2.5–5）","差異","配對差異","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i&&i!==6?"num":""},h)));
+  t.appendChild(el("thead")).appendChild(hr); const tb = el("tbody"); t.appendChild(tb);
+  const list = Object.entries(groups).map(([j,rs])=>{ const pre=rs.filter(r=>r.phase==="前測"), post=rs.filter(r=>r.phase==="後測"), pairs=makePairs(rs);
+    return {j, pre, post, pairs, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)),
+      pd: pairs.length? mean(pairs.map(p=>p.post.avg-p.pre.avg)) : null, ov: mean(post.map(r=>num(r.overall)).filter(v=>v!=null))}; })
+    .sort((x,y)=>(y.pre.length+y.post.length)-(x.pre.length+x.post.length));
+  if(!list.length){ tb.appendChild(el("tr")).appendChild(el("td",{colspan:10,class:"empty"},"目前沒有資料")); return; }
+  list.forEach(o=>{
+    const tr = el("tr",{class:"click"+(o.j===sel?" sel":""),tabindex:"0"});
+    tr.appendChild(el("td",{},o.j)); [o.pre.length,o.post.length,o.pairs.length].forEach(v=>tr.appendChild(el("td",{class:"num"},v)));
+    tr.appendChild(el("td",{class:"num"},f2(o.a))); tr.appendChild(el("td",{class:"num"},f2(o.b)));
+    const md = el("td"); md.appendChild(miniDumbbell(o.a,o.b)); tr.appendChild(md);
+    const d1 = el("td",{class:"num"}); d1.appendChild(deltaSpan(o.a!=null&&o.b!=null?o.b-o.a:null)); tr.appendChild(d1);
+    const d2 = el("td",{class:"num"}); d2.appendChild(deltaSpan(o.pd)); tr.appendChild(d2);
+    tr.appendChild(el("td",{class:"num"},f2(o.ov)));
+    const go = ()=>{ $("#fJob").value = (o.j===sel ? "" : o.j); render(); };
+    tr.addEventListener("click", go); tr.addEventListener("keydown", e=>{ if(e.key==="Enter") go(); });
+    tb.appendChild(tr);
+  });
+}
+
+function mixColor(c1, c2, t){ const h=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)); const a=h(c1), b=h(c2); return "#"+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,"0")).join(""); }
+function lum(c){ const v=[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)/255).map(x=>x<=.03928?x/12.92:((x+.055)/1.055)**2.4); return .2126*v[0]+.7152*v[1]+.0722*v[2]; }
+function renderHeat(rows){
+  const node = clear($("#heat")), groups={};
+  rows.forEach(r=>(groups[r.jobG]=groups[r.jobG]||[]).push(r));
+  const data = Object.entries(groups).map(([j,rs])=>{ const pre=rs.filter(r=>r.phase==="前測"), post=rs.filter(r=>r.phase==="後測");
+    return {j, np:pre.length, nq:post.length, d: DIMS.map(([k])=>{ const a=mean(pre.map(r=>num(r[k])).filter(v=>v!=null)), b=mean(post.map(r=>num(r[k])).filter(v=>v!=null)); return a!=null&&b!=null? {a,b,v:b-a}:null; })}; })
+    .filter(o=>o.np>=3&&o.nq>=3).sort((a,b)=>(b.np+b.nq)-(a.np+a.nq));
+  if(!data.length){ node.appendChild(el("div",{class:"empty"},"資料不足（每個職類前、後測需各至少 3 份）")); return; }
+  const W = Math.max(node.clientWidth||700, 560), labW = 190, top = 26, ch = 34, cw = (W-labW)/DIMS.length, H = top + data.length*ch;
+  const max = Math.max(.3, ...data.flatMap(o=>o.d.filter(Boolean).map(c=>Math.abs(c.v))));
+  const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"職類與面向的前後測差異"});
+  DIMS.forEach(([,l],i)=>svg.appendChild(el("text",{x:labW+cw*i+cw/2,y:16,"text-anchor":"middle","font-size":12.5,"font-weight":700,fill:css("--ink2")},l)));
+  const mid = css("--mid"), pos = css("--post"), neg = css("--neg");
+  data.forEach((o,ri)=>{ const y = top+ri*ch;
+    svg.appendChild(el("text",{x:0,y:y+ch/2+4,"font-size":13,fill:css("--ink")},o.j));
+    o.d.forEach((c,ci)=>{ const fill = !c ? css("--grid") : c.v>=0 ? mixColor(mid,pos,Math.min(1,c.v/max)) : mixColor(mid,neg,Math.min(1,-c.v/max));
+      const r = el("rect",{x:labW+cw*ci+1,y:y+1,width:cw-2,height:ch-2,rx:3,fill}); svg.appendChild(r);
+      if(c){ svg.appendChild(el("text",{x:labW+cw*ci+cw/2,y:y+ch/2+4,"text-anchor":"middle","font-size":12.5,"font-weight":700,fill: lum(fill)>.4?"#1a1a1a":"#ffffff"},(c.v>=0?"+":"")+c.v.toFixed(2)));
+        setTip(r, `${o.j}・${DIMS[ci][1]}`, [{k:`前測（n=${o.np}）`,v:f2(c.a),c:pre_()},{k:`後測（n=${o.nq}）`,v:f2(c.b),c:pos},{k:"差異",v:(c.v>=0?"+":"")+c.v.toFixed(2)}]); }
+    });
+  });
+  node.style.overflowX="auto"; node.appendChild(svg);
+}
+const pre_ = ()=>css("--pre");
+
+function renderTrend(rows){
+  const node = clear($("#trend")), byS = {};
+  rows.forEach(r=>(byS[r.courseDate]=byS[r.courseDate]||[]).push(r));
+  let ses = Object.keys(byS).sort().map(d=>{ const rs=byS[d], pre=rs.filter(r=>r.phase==="前測"), post=rs.filter(r=>r.phase==="後測");
+    return {d, np:pre.length, nq:post.length, a:mean(pre.map(r=>r.avg).filter(v=>v!=null)), b:mean(post.map(r=>r.avg).filter(v=>v!=null)), ov:mean(post.map(r=>num(r.overall)).filter(v=>v!=null)), sat:mean(post.map(r=>num(r.satAvg)).filter(v=>v!=null))}; });
+  // table
+  const t = clear($("#sessTbl")); const hr=el("tr"); ["課程日期","前測 n","後測 n","前測 IPE","後測 IPE","差異","滿意度平均","整體滿意度"].forEach((h,i)=>hr.appendChild(el("th",{class:i?"num":""},h)));
+  t.appendChild(el("thead")).appendChild(hr); const tb=el("tbody"); t.appendChild(tb);
+  ses.slice().reverse().forEach(s=>{ const tr=el("tr"); tr.appendChild(el("td",{},s.d)); [s.np,s.nq,f2(s.a),f2(s.b)].forEach(v=>tr.appendChild(el("td",{class:"num"},v)));
+    const dt=el("td",{class:"num"}); dt.appendChild(deltaSpan(s.a!=null&&s.b!=null?s.b-s.a:null)); tr.appendChild(dt); tr.appendChild(el("td",{class:"num"},f2(s.sat))); tr.appendChild(el("td",{class:"num"},f2(s.ov))); tb.appendChild(tr); });
+  const all = ses; ses = ses.filter(s=>s.np>=MIN_N||s.nq>=MIN_N);
+  if(!ses.length){ node.appendChild(el("div",{class:"empty"},"目前沒有資料")); return; }
+  const W = node.clientWidth||700, H = 230, L = 36, R = 54, T = 14, B = 34;
+  const vals = ses.flatMap(s=>[s.a,s.b]).filter(v=>v!=null); const lo = Math.max(1, Math.min(3.5, Math.floor(Math.min(...vals)*2)/2-.5)), hi=5;
+  const x = i => ses.length===1 ? L+(W-L-R)/2 : L + i*(W-L-R)/(ses.length-1), y = v => T + (hi-v)/(hi-lo)*(H-T-B);
+  const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":"各場次前後測平均趨勢"});
+  for(let v=lo; v<=hi+1e-9; v+=.5){ svg.appendChild(el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--grid")})); svg.appendChild(el("text",{x:L-8,y:y(v)+4,"text-anchor":"end","font-size":11,fill:css("--muted")},v.toFixed(1))); }
+  const step = Math.ceil(ses.length / Math.max(1, Math.floor((W-L-R)/70)));
+  ses.forEach((s,i)=>{ if(i%step===0||i===ses.length-1) svg.appendChild(el("text",{x:x(i),y:H-12,"text-anchor":"middle","font-size":11,fill:css("--muted")},s.d.slice(2).replace(/-/g,"/"))); });
+  const cross = el("line",{y1:T,y2:H-B,stroke:css("--muted"),"stroke-width":1,"stroke-dasharray":"3 3",opacity:0}); svg.appendChild(cross);
+  [["a","--pre","前測"],["b","--post","後測"]].forEach(([k,c,name])=>{
+    const nk = k==="a"?"np":"nq", ok = s => s[k]!=null && s[nk]>=MIN_N;
+    const pts = ses.map((s,i)=>ok(s)?`${x(i)},${y(s[k])}`:null).filter(Boolean);
+    if(pts.length>1) svg.appendChild(el("polyline",{points:pts.join(" "),fill:"none",stroke:css(c),"stroke-width":2,"stroke-linejoin":"round"}));
+    ses.forEach((s,i)=>{ if(ok(s)) svg.appendChild(el("circle",{cx:x(i),cy:y(s[k]),r:4.5,fill:css(c),stroke:css("--card"),"stroke-width":2})); });
+    let lastI = -1; ses.forEach((s,i)=>{ if(ok(s)) lastI=i; });
+    if(lastI>=0) svg.appendChild(el("text",{x:x(lastI)+9,y:y(ses[lastI][k])+(k==="a"?12:-4),"font-size":12,"font-weight":700,fill:css("--ink2")},`${name} ${f2(ses[lastI][k])}`));
+  });
+  const hit = el("rect",{x:L-10,y:0,width:W-L-R+20,height:H,fill:"transparent"}); hit.__cross = true; svg.appendChild(hit);
+  hit.addEventListener("pointermove", e=>{ const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)*(W/r.width);
+    let bi=0, bd=1e9; ses.forEach((s,i)=>{ const d=Math.abs(x(i)-px); if(d<bd){bd=d;bi=i;} }); const s=ses[bi];
+    cross.setAttribute("x1",x(bi)); cross.setAttribute("x2",x(bi)); cross.setAttribute("opacity",1);
+    showTip({title:`課程日期 ${s.d}`, rows:[{k:`前測（n=${s.np}）`,v:f2(s.a),c:css("--pre")},{k:`後測（n=${s.nq}）`,v:f2(s.b),c:css("--post")},{k:"整體滿意度",v:f2(s.ov)}]}, e.clientX, e.clientY); });
+  hit.addEventListener("pointerleave", ()=>{ cross.setAttribute("opacity",0); tip.style.display="none"; });
+  node.appendChild(svg);
+}
+
+function hbars(node, items, opts){
+  clear(node); if(!items.length || items.every(i=>i.v==null)){ node.appendChild(el("div",{class:"empty"},"目前沒有資料")); return; }
+  const W = node.clientWidth||500, labW = Math.min(opts.labW||200, W*.48), rh = opts.rh||30, H = items.length*rh + 20, max = opts.max, valW = 96;
+  const x = v => (W-labW-valW) * v/max;
+  const svg = el("svg",{width:W,height:H,viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":opts.aria||""});
+  const ticks = opts.ticks || []; ticks.forEach(t=>{ svg.appendChild(el("line",{x1:labW+x(t),x2:labW+x(t),y1:0,y2:H-18,stroke:css("--grid")})); svg.appendChild(el("text",{x:labW+x(t),y:H-4,"text-anchor":"middle","font-size":11,fill:css("--muted")},opts.tickFmt?opts.tickFmt(t):t)); });
+  items.forEach((it,i)=>{ const y=i*rh, bh=rh-12, w=Math.max(0,x(it.v||0));
+    let lab = it.label; const maxCh = Math.floor(labW/13.2); if(lab.length>maxCh) lab = lab.slice(0,maxCh-1)+"…";
+    svg.appendChild(el("text",{x:labW-8,y:y+rh/2+2,"text-anchor":"end","font-size":13,fill:css("--ink")},lab));
+    if(w>0){ const r4=Math.min(4,w); svg.appendChild(el("path",{d:`M${labW},${y+6} h${w-r4} a${r4},${r4} 0 0 1 ${r4},${r4} v${bh-2*r4} a${r4},${r4} 0 0 1 -${r4},${r4} h-${w-r4} z`,fill:css(opts.color||"--post")})); }
+    svg.appendChild(el("text",{x:labW+w+6,y:y+rh/2+2,"font-size":12.5,"font-weight":700,fill:css("--ink2")},opts.fmt(it)));
+    const hit=el("rect",{x:0,y,width:W,height:rh,fill:"transparent"}); setTip(hit, it.label, it.tip || [{k:"",v:opts.fmt(it)}]); svg.appendChild(hit);
+  });
+  node.appendChild(svg);
+}
+function renderSat(post){
+  const items = SAT.map((l,i)=>{ const v = post.map(r=>num(r["sat"+(i+1)])).filter(x=>x!=null); return {label:l, v:mean(v), n:v.length, tip:[{k:`平均（n=${v.length}）`,v:f2(mean(v))},{k:"4–5 分比例",v:v.length?pct(v.filter(x=>x>=4).length/v.length):"–"}]}; });
+  hbars($("#satChart"), items, {max:5, ticks:[0,1,2,3,4,5], fmt:it=>f2(it.v), labW:230, aria:"課程滿意度各題平均"});
+  const ov = post.map(r=>num(r.overall)).filter(x=>x!=null);
+  $("#ovDesc").textContent = ov.length ? `n=${ov.length}，平均 ${f2(mean(ov))}，4–5 分占 ${pct(ov.filter(x=>x>=4).length/ov.length)}。` : "";
+  const lbl = ["非常不滿意","不滿意","普通","滿意","非常滿意"];
+  const items2 = [5,4,3,2,1].map(s=>{ const c = ov.filter(x=>x===s).length; return {label:`${s} 分・${lbl[s-1]}`, v: ov.length? c/ov.length : null, c, tip:[{k:"人數",v:String(c)},{k:"比例",v:ov.length?pct(c/ov.length):"–"}]}; });
+  hbars($("#ovChart"), ov.length?items2:[], {max:1, ticks:[0,.25,.5,.75,1], tickFmt:t=>(t*100)+"%", fmt:it=>`${pct(it.v)}（${it.c}）`, labW:130, color:"--post", aria:"整體滿意度分布"});
+}
+function renderMulti(node, post, key, opts, multi){
+  const n = post.filter(r=>r[key]).length;
+  const items = opts.map(o=>{ const c = post.filter(r=>String(r[key]||"").split(/[、;]/).map(s=>s.trim()).includes(o)).length; return {label:o, v:n?c/n:null, c, tip:[{k:"人數",v:String(c)},{k:"占後測填答",v:n?pct(c/n):"–"}]}; }).sort((a,b)=>(b.c-a.c));
+  hbars(node, n?items:[], {max: multi ? Math.max(.5, ...items.map(i=>i.v||0)) : Math.max(.3, ...items.map(i=>i.v||0)), ticks:[], fmt:it=>`${pct(it.v)}（${it.c}）`, labW:210, color:"--post"});
+}
+function renderComments(post){
+  const box = clear($("#comments"));
+  const junk = /^(無|没有|沒有|沒|nil|no|none|n\/a|na|\.|-|good|thx|thanks|謝謝|無意見|ok)$/i;
+  const list = post.filter(r=>r.comment && !junk.test(String(r.comment).trim())).sort((a,b)=>a.timestamp<b.timestamp?1:-1);
+  $("#cmtCount").textContent = `（${list.length} 則，已略過「無」「謝謝」等）`;
+  if(!list.length){ box.appendChild(el("div",{class:"empty"},"目前沒有回饋意見")); return; }
+  list.forEach(r=>{ const d=el("div",{class:"cmt"}); d.appendChild(el("div",{class:"m"},`${r.courseDate}・${r.jobG}${r.overall?`・整體 ${r.overall} 分`:""}`)); d.appendChild(el("div",{class:"t"},String(r.comment))); box.appendChild(d); });
+}
+
+/* ---------- CSV ---------- */
+$("#csvBtn").addEventListener("click", ()=>{
+  const rows = filtered(false), cols = ["courseDate","phase","identity","unit","job",...DIMS.map(d=>d[0]),"ipeAvg","gain","teamBest",...SAT.map((_,i)=>"sat"+(i+1)),"satAvg","overall","comment","pid"];
+  const head = ["課程日期","測驗階段","身分別","單位科別","職類",...DIMS.map(d=>d[1]),"IPE平均","最具收穫環節","團隊最出色面向",...SAT,"滿意度平均","整體滿意度","回饋意見","配對代碼"];
+  const esc = v => { v = v==null?"":String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const csv = "﻿" + [head, ...rows.map(r=>cols.map(c=>r[c]))].map(r=>r.map(esc).join(",")).join("\n");
+  const a = el("a",{href:URL.createObjectURL(new Blob([csv],{type:"text/csv"})),download:`IPE問卷_${new Date().toISOString().slice(0,10)}.csv`}); document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ---------- events ---------- */
+["#fSession","#fJob","#fId","#fFrom","#fTo"].forEach(s=>$(s).addEventListener("change", render));
+$("#fPeriod").addEventListener("change", ()=>{ const c=$("#fPeriod").value==="custom"; $("#lFrom").hidden=!c; $("#lTo").hidden=!c; render(); });
+$("#clearBtn").addEventListener("click", ()=>{ ["#fSession","#fJob","#fId","#fFrom","#fTo"].forEach(s=>$(s).value=""); $("#fPeriod").value="all"; $("#lFrom").hidden=$("#lTo").hidden=true; render(); });
+$("#reloadBtn").addEventListener("click", load);
+$("#cmpMode").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; cmpMode=b.dataset.v; [...$("#cmpMode").children].forEach(x=>x.classList.toggle("on",x===b)); render(); });
+let rz; addEventListener("resize", ()=>{ clearTimeout(rz); rz=setTimeout(()=>ALL.length&&render(),150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>ALL.length&&render());
+load();
+</script>
+</body>
+</html>
