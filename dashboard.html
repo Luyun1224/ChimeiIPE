@@ -129,6 +129,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
     <label id="lTo" hidden>迄<input type="date" id="fTo"></label>
     <label>課程場次<select id="fSession"></select></label>
     <label>職類<select id="fJob"></select></label>
+    <label>職級<select id="fRank"></select></label>
     <button class="fbtn" id="clearBtn">清除篩選</button>
     <span class="spacer"></span>
     <button class="fbtn" id="csvBtn">下載篩選資料 CSV</button>
@@ -147,7 +148,7 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><div class="legend" id="dimLegend"></div><div class="seg" id="viewMode"><button data-v="radar" class="on">雷達圖</button><button data-v="dumbbell">啞鈴圖</button></div></div>
       <div class="chart" id="dimChart"></div>
       <div class="tbl-wrap" style="margin-top:12px"><table id="pairTbl"></table></div>
-      <p class="note">配對：同一人（人事號＋姓名）的後測，對應到課程日期在 14 天內、最接近的前測。p 值為配對 t 檢定（雙尾），<span class="sig">*</span> p&lt;.05、<span class="sig">**</span> p&lt;.01、<span class="sig">***</span> p&lt;.001；d 為配對效果量。</p>
+      <p class="note">配對：同一人（有人事號以人事號辨識；無人事號以姓名＋單位科別辨識）的後測，對應到課程日期在 14 天內、最接近的前測。p 值為配對 t 檢定（雙尾），<span class="sig">*</span> p&lt;.05、<span class="sig">**</span> p&lt;.01、<span class="sig">***</span> p&lt;.001；d 為配對效果量。</p>
     </section>
 
     <section class="card">
@@ -254,7 +255,7 @@ async function load(){
   try{
     const res = await fetch(GAS_URL + "?action=data&t=" + Date.now());
     const j = await res.json(); if(!j.ok) throw new Error(j.error || "讀取失敗");
-    ALL = (j.rows||[]).map(r=>{ r.courseDate = String(r.courseDate||r.timestamp||"").slice(0,10); r.jobG = jobGroup(r.job); r.avg = ipeAvg(r); return r; }).filter(r=>r.phase==="前測"||r.phase==="後測");
+    ALL = (j.rows||[]).map(r=>{ r.courseDate = String(r.courseDate||r.timestamp||"").slice(0,10); r.jobG = jobGroup(r.job); r.rankG = String(r.rank||"").trim() || "未填"; r.avg = ipeAvg(r); return r; }).filter(r=>r.phase==="前測"||r.phase==="後測");
     $("#updated").textContent = `資料更新：${j.updated||"—"}　共 ${ALL.length} 筆`;
     buildFilterOptions(); render();
   }catch(err){
@@ -267,7 +268,9 @@ async function load(){
 function fillSelect(sel, opts, keep){ const cur = keep ? sel.value : ""; clear(sel); opts.forEach(([v,t])=>sel.appendChild(el("option",{value:v},t))); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
 function buildFilterOptions(){
   const cnt = k => ALL.reduce((m,r)=>(m[r[k]]=(m[r[k]]||0)+1,m),{});
-  const jobs = cnt("jobG"), ses = cnt("courseDate");
+  const jobs = cnt("jobG"), ses = cnt("courseDate"), ranks = cnt("rankG");
+  const RANKS = ["臨床教師","住院醫師","PGY2醫師","PGY1醫師","實習醫學生(UGY)","醫事實習生"], ri = k => { const i = RANKS.indexOf(k); return i<0 ? 99 : i; };
+  fillSelect($("#fRank"), [["","全部職級"], ...Object.keys(ranks).sort((a,b)=>ri(a)-ri(b)).map(k=>[k,`${k}（${ranks[k]}）`])], true);
   fillSelect($("#fJob"), [["","全部職類"], ...Object.keys(jobs).sort((a,b)=>jobs[b]-jobs[a]).map(k=>[k,`${k}（${jobs[k]}）`])], true);
   fillSelect($("#fSession"), [["","全部場次"], ...Object.keys(ses).sort().reverse().map(k=>[k,`${k}（${ses[k]}）`])], true);
 }
@@ -277,8 +280,8 @@ function filtered(skipJob){
   if(p==="90"||p==="180"){ const d=new Date(today-Number(p)*864e5); from=d.toISOString().slice(0,10); }
   else if(p==="year"){ from = today.getFullYear()+"-01-01"; }
   else if(p==="custom"){ from=$("#fFrom").value; to=$("#fTo").value; }
-  const s=$("#fSession").value, j=$("#fJob").value;
-  return ALL.filter(r=> (!from||r.courseDate>=from) && (!to||r.courseDate<=to) && (!s||r.courseDate===s) && (skipJob||!j||r.jobG===j));
+  const s=$("#fSession").value, j=$("#fJob").value, k=$("#fRank").value;
+  return ALL.filter(r=> (!from||r.courseDate>=from) && (!to||r.courseDate<=to) && (!s||r.courseDate===s) && (!k||r.rankG===k) && (skipJob||!j||r.jobG===j));
 }
 
 /* 配對：每筆後測找同 pid、課程日期在 14 天內且最接近（不晚於後測）的前測 */
@@ -548,17 +551,17 @@ function renderComments(post){
 
 /* ---------- CSV ---------- */
 $("#csvBtn").addEventListener("click", ()=>{
-  const rows = filtered(false), cols = ["courseDate","phase","unit","job",...DIMS.map(d=>d[0]),"ipeAvg","gain","teamBest","overall","comment","pid"];
-  const head = ["課程日期","測驗階段","單位科別","職類",...DIMS.map(d=>d[1]),"IPE平均","最具收穫環節","團隊最出色面向","整體滿意度","可加強或改進的面向","配對代碼"];
+  const rows = filtered(false), cols = ["courseDate","phase","unit","job","rank",...DIMS.map(d=>d[0]),"ipeAvg","gain","teamBest","overall","comment","pid"];
+  const head = ["課程日期","測驗階段","單位科別","職類","職級",...DIMS.map(d=>d[1]),"IPE平均","最具收穫環節","團隊最出色面向","整體滿意度","可加強或改進的面向","配對代碼"];
   const esc = v => { v = v==null?"":String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
   const csv = "﻿" + [head, ...rows.map(r=>cols.map(c=>r[c]))].map(r=>r.map(esc).join(",")).join("\n");
   const a = el("a",{href:URL.createObjectURL(new Blob([csv],{type:"text/csv"})),download:`IPE問卷_${new Date().toISOString().slice(0,10)}.csv`}); document.body.appendChild(a); a.click(); a.remove();
 });
 
 /* ---------- events ---------- */
-["#fSession","#fJob","#fFrom","#fTo"].forEach(s=>$(s).addEventListener("change", render));
+["#fSession","#fJob","#fRank","#fFrom","#fTo"].forEach(s=>$(s).addEventListener("change", render));
 $("#fPeriod").addEventListener("change", ()=>{ const c=$("#fPeriod").value==="custom"; $("#lFrom").hidden=!c; $("#lTo").hidden=!c; render(); });
-$("#clearBtn").addEventListener("click", ()=>{ ["#fSession","#fJob","#fFrom","#fTo"].forEach(s=>$(s).value=""); $("#fPeriod").value="all"; $("#lFrom").hidden=$("#lTo").hidden=true; render(); });
+$("#clearBtn").addEventListener("click", ()=>{ ["#fSession","#fJob","#fRank","#fFrom","#fTo"].forEach(s=>$(s).value=""); $("#fPeriod").value="all"; $("#lFrom").hidden=$("#lTo").hidden=true; render(); });
 $("#reloadBtn").addEventListener("click", load);
 $("#viewMode").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; viewMode=b.dataset.v; [...$("#viewMode").children].forEach(x=>x.classList.toggle("on",x===b)); render(); });
 $("#cmpMode").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; cmpMode=b.dataset.v; [...$("#cmpMode").children].forEach(x=>x.classList.toggle("on",x===b)); render(); });
