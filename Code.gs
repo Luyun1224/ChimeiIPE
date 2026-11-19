@@ -125,14 +125,17 @@ function doGet(e) {
     COLUMNS.forEach((c, i) => { if (!HIDE[c[0]]) o[c[0]] = r[i]; });
     o.timestamp = fmt(r[0], 'yyyy-MM-dd HH:mm:ss');
     o.courseDate = fmt(r[1], 'yyyy-MM-dd');
-    o.pid = pid_(r[4], r[3]); // 人事號 + 姓名 → 配對代碼（無人事號時僅以姓名配對）
+    o.pid = pid_(r[4], r[3], r[5]); // 有人事號用人事號；沒有則用姓名＋單位科別
     return o;
   });
   return json_({ ok: true, rows: rows, updated: fmt(new Date(), 'yyyy-MM-dd HH:mm') });
 }
 
-function pid_(empId, name) {
-  const raw = String(empId || '').trim().toUpperCase() + '|' + String(name || '').replace(/\s/g, '');
+// 配對代碼：有人事號 → 只用人事號；沒有人事號 → 姓名＋單位科別（忽略空白、英文大小寫）
+function pid_(empId, name, unit) {
+  const norm = v => String(v || '').replace(/\s/g, '').toUpperCase();
+  const id = norm(empId);
+  const raw = id ? 'ID|' + id : 'NU|' + norm(name) + '|' + norm(unit);
   const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
   return bytes.slice(0, 8).map(b => ('0' + (b & 255).toString(16)).slice(-2)).join('');
 }
