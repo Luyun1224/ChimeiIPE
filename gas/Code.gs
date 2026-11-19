@@ -1,17 +1,20 @@
 /**
  * 院級跨領域 IPE 問卷（前測／後測）— Google Apps Script 後端
- * 試算表：https://docs.google.com/spreadsheets/d/1jJMCmXjXwnwffrT8DmeV0TIXkOi6tljnDdvcQup60IU/edit
+ * 完整說明見 repo 的 docs/DEPLOY.md
  *
- * 部署步驟：
- * 1. 開啟上面的試算表 → 擴充功能 → Apps Script，把本檔內容貼上並儲存
+ * 部署步驟（摘要）：
+ * 1. 開啟要存資料的 Google 試算表 → 擴充功能 → Apps Script，把本檔內容整份貼上並儲存
  * 2. 先手動執行一次 setup()，授權後會建立「IPE問卷回應」工作表與標題列
  *    （舊版工作表若還沒有「職級」欄，setup() 會自動在「職類」右側插入）
  * 3. 部署 → 新增部署作業 → 類型選「網頁應用程式」
  *    執行身分：我；存取權：所有人 → 部署
- * 4. 把產生的 /exec 網址貼到 index.html 的 GAS_URL
+ * 4. 把產生的 /exec 網址貼到 repo 根目錄 config.js 的 gasUrl
  * ※ 之後若修改程式碼，要用「管理部署作業 → 編輯 → 新版本」更新，網址才會不變
  */
 
+// 留空 = 使用「這個 Apps Script 所附屬的試算表」（從試算表 → 擴充功能 → Apps Script 建立的就是）
+// 若 Apps Script 是獨立專案，才需要填試算表網址中 /d/ 與 /edit 之間那串 ID
+// 奇美：1jJMCmXjXwnwffrT8DmeV0TIXkOi6tljnDdvcQup60IU
 const SPREADSHEET_ID = '1jJMCmXjXwnwffrT8DmeV0TIXkOi6tljnDdvcQup60IU';
 const SHEET_NAME = 'IPE問卷回應';
 
@@ -41,7 +44,7 @@ const COLUMNS = [
 const RANKS = ['臨床教師', '住院醫師', 'PGY2醫師', 'PGY1醫師', '實習醫學生(UGY)', '醫事實習生'];
 
 function getSheet_() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SPREADSHEET_ID ? SpreadsheetApp.openById(SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
   if (sh.getLastRow() === 0) {
