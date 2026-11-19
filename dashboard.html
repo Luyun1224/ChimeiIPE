@@ -196,12 +196,15 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:6px 16px 30
     </section>
   </div>
 </div>
-<footer>奇美醫院 教學部</footer>
+<footer></footer>
 <div id="tip"></div>
 
+<script src="config.js"></script>
 <script>
-/* ★ 與問卷相同的 GAS 網址（部署新版本後網址不變） */
-const GAS_URL = "https://script.google.com/macros/s/AKfycby7zSy8dfboib32GUJ8ZIDxNhAHMcpqMsG8i3ErORlaJl7D4ByPw3ImrjHY1auN2_aD/exec";
+/* 院名、GAS 網址等各院設定都在 config.js */
+const CFG = window.IPE_CONFIG || {};
+const GAS_URL = CFG.gasUrl;
+document.querySelector("footer").textContent = [CFG.hospital, CFG.dept].filter(Boolean).join(" ");
 
 const DIMS = [["ipe1","專業認同"],["ipe2","協作行為"],["ipe3","心理安全"],["ipe4","全人整合"],["ipe5","團隊整合"],["ipe6","能力轉移"]];
 const GAIN = ["專業角色介紹與理解","個案討論與分析","共同制定照護計畫","與不同專業背景成員的自由交流","協作技巧演練"];
