@@ -112,10 +112,10 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px
   <!-- ① 基本資料 -->
   <section class="card">
     <h2 class="sec-h"><span class="num">1</span>基本資料</h2>
-    <p class="sec-sub">前後測請使用相同的姓名與人事號，以利配對分析。</p>
+    <p class="sec-sub">前後測請使用相同的姓名與人事號，以利配對分析（無人事號者，前後測姓名請一致）。</p>
     <div class="grid">
       <div class="fld"><label class="f">姓名<span class="req">*</span></label><input type="text" name="name" autocomplete="name"></div>
-      <div class="fld"><label class="f">人事號<span class="req">*</span></label><input type="text" name="empId" placeholder="無人事號者請填「實習學生」或身分別"></div>
+      <div class="fld"><label class="f">人事號</label><input type="text" name="empId" placeholder="醫事實習生等無人事號者可免填"></div>
       <div class="fld"><label class="f">單位科別<span class="req">*</span></label><input type="text" name="unit" placeholder="例：10A、GI"></div>
       <div class="fld"><label class="f">職類<span class="req">*</span></label>
         <select name="job" id="job">
@@ -125,6 +125,12 @@ footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px
           <option>聽力師</option><option>醫事檢驗師</option><option>醫事放射師</option><option>臨床心理師</option>
           <option>社工師</option><option>靈性關懷師</option><option>行政人員</option>
           <option>實習醫學生（UGY／Clerk）</option><option>其他實習學生</option><option>其他</option>
+        </select></div>
+      <div class="fld"><label class="f">職級<span class="req">*</span></label>
+        <select name="rank" id="rank">
+          <option value="">請選擇</option>
+          <option>臨床教師</option><option>住院醫師</option><option>PGY2醫師</option><option>PGY1醫師</option>
+          <option>實習醫學生(UGY)</option><option>醫事實習生</option>
         </select></div>
       <div class="fld hidden" id="jobOtherWrap"><label class="f">請填寫職類<span class="req">*</span></label><input type="text" name="jobOther" placeholder="例：實習藥學生"></div>
       <div class="fld"><label class="f">課程日期<span class="req">*</span></label><input type="date" name="courseDate"></div>
@@ -227,7 +233,7 @@ $("#teamOpts").innerHTML = TEAM.map(g=>`<label class="opt"><input type="radio" n
 (function(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); form.courseDate.value=d.toISOString().slice(0,10); })();
 
 /* 同一裝置記住基本資料（方便後測時帶入） */
-const KEY="ipe_basic_v1", BASIC=["name","empId","unit","job","jobOther"];
+const KEY="ipe_basic_v1", BASIC=["name","empId","unit","job","jobOther","rank"];
 try{ const s=JSON.parse(localStorage.getItem(KEY)||"{}"); BASIC.forEach(k=>{ if(s[k]) form[k].value=s[k]; }); }catch(e){}
 
 function toggleJobOther(){ $("#jobOtherWrap").classList.toggle("hidden", form.job.value!=="其他"); }
@@ -275,7 +281,7 @@ form.addEventListener("submit", async e=>{
   $("#err").textContent="";
   const bad=[];
   // 基本資料
-  ["name","empId","unit","job","courseDate"].forEach(k=>{
+  ["name","unit","job","rank","courseDate"].forEach(k=>{
     if(!String(form[k].value).trim()) bad.push(form[k].closest(".fld"));
   });
   if(form.job.value==="其他" && !form.jobOther.value.trim()) bad.push($("#jobOtherWrap"));
@@ -305,7 +311,8 @@ form.addEventListener("submit", async e=>{
     name: form.name.value.trim(),
     empId: form.empId.value.trim(),
     unit: form.unit.value.trim(),
-    job: form.job.value==="其他" ? "其他："+form.jobOther.value.trim() : form.job.value
+    job: form.job.value==="其他" ? "其他："+form.jobOther.value.trim() : form.job.value,
+    rank: form.rank.value
   };
   IPE.forEach(q=>data[q.k]=Number(val(q.k)));
   if(isPost){
