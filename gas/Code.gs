@@ -41,7 +41,7 @@ const COLUMNS = [
   ['comment', '可加強或改進的面向']
 ];
 
-const RANKS = ['臨床教師', '住院醫師', 'PGY2醫師', 'PGY1醫師', '實習醫學生(UGY)', '醫事實習生'];
+const RANKS = ['臨床教師', '住院醫師', 'PGY2醫師', 'PGY1醫師', 'PGY醫事', '實習醫學生(UGY)', '醫事實習生'];
 
 function getSheet_() {
   const ss = SPREADSHEET_ID ? SpreadsheetApp.openById(SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();

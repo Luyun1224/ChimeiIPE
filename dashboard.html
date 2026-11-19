@@ -272,7 +272,7 @@ function fillSelect(sel, opts, keep){ const cur = keep ? sel.value : ""; clear(s
 function buildFilterOptions(){
   const cnt = k => ALL.reduce((m,r)=>(m[r[k]]=(m[r[k]]||0)+1,m),{});
   const jobs = cnt("jobG"), ses = cnt("courseDate"), ranks = cnt("rankG");
-  const RANKS = ["臨床教師","住院醫師","PGY2醫師","PGY1醫師","實習醫學生(UGY)","醫事實習生"], ri = k => { const i = RANKS.indexOf(k); return i<0 ? 99 : i; };
+  const RANKS = ["臨床教師","住院醫師","PGY2醫師","PGY1醫師","PGY醫事","實習醫學生(UGY)","醫事實習生"], ri = k => { const i = RANKS.indexOf(k); return i<0 ? 99 : i; };
   fillSelect($("#fRank"), [["","全部職級"], ...Object.keys(ranks).sort((a,b)=>ri(a)-ri(b)).map(k=>[k,`${k}（${ranks[k]}）`])], true);
   fillSelect($("#fJob"), [["","全部職類"], ...Object.keys(jobs).sort((a,b)=>jobs[b]-jobs[a]).map(k=>[k,`${k}（${jobs[k]}）`])], true);
   fillSelect($("#fSession"), [["","全部場次"], ...Object.keys(ses).sort().reverse().map(k=>[k,`${k}（${ses[k]}）`])], true);
